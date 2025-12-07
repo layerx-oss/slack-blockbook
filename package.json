@@ -1,0 +1,68 @@
+{
+  "name": "slack-blockbook",
+  "version": "1.0.0",
+  "description": "Storybook-like preview tool for Slack Block Kit development",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/layerx/slack-blockbook.git"
+  },
+  "homepage": "https://github.com/layerx/slack-blockbook#readme",
+  "bugs": {
+    "url": "https://github.com/layerx/slack-blockbook/issues"
+  },
+  "author": "LayerX Inc.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "slack-blockbook": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "slack",
+    "block-kit",
+    "preview",
+    "storybook",
+    "jsx-slack",
+    "development",
+    "hot-reload"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm build"
+  },
+  "peerDependencies": {
+    "tsx": "^4.0.0"
+  },
+  "dependencies": {
+    "chokidar": "^3.6.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@types/node": "^22.10.1",
+    "eslint": "^9.16.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.17.0",
+    "vitest": "^2.1.8"
+  }
+}
