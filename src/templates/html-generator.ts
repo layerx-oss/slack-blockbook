@@ -1,5 +1,5 @@
 /**
- * Block Kit Preview HTML生成
+ * Block Kit Preview HTML generation
  */
 
 import path from "node:path";
@@ -22,8 +22,106 @@ interface StoryData {
   argTypes?: Record<string, unknown>;
 }
 
+interface TreeNode {
+  name: string;
+  children: Map<string, TreeNode>;
+  stories: Array<{ storyId: string; storyName: string; filePath: string }>;
+}
+
 /**
- * HTMLページを生成
+ * Build a tree structure from story names (using "/" as hierarchy separator)
+ * Example: "Components/Buttons/Primary" -> Components > Buttons > Primary
+ */
+function buildStoryTree(
+  groupedByFile: Record<string, GeneratedBlockKitUrl[]>,
+  baseDir: string,
+): TreeNode {
+  const root: TreeNode = { name: "", children: new Map(), stories: [] };
+
+  for (const [filePath, fileUrls] of Object.entries(groupedByFile)) {
+    const relativePath = path.relative(baseDir, filePath);
+    const fileId = relativePath.replaceAll(/[^a-zA-Z\d]/g, "_");
+
+    for (let index = 0; index < fileUrls.length; index++) {
+      const urlData = fileUrls[index]!;
+      const storyId = `${fileId}_${index}`;
+
+      // Parse story name for hierarchy (split by "/")
+      const nameParts = urlData.storyName.split("/").map((p) => p.trim());
+      const storyDisplayName = nameParts[nameParts.length - 1]!;
+      const hierarchyParts = nameParts.slice(0, -1);
+
+      // Navigate/create hierarchy
+      let current = root;
+      for (const part of hierarchyParts) {
+        if (!current.children.has(part)) {
+          current.children.set(part, {
+            name: part,
+            children: new Map(),
+            stories: [],
+          });
+        }
+        current = current.children.get(part)!;
+      }
+
+      // Add story to current node
+      current.stories.push({
+        storyId,
+        storyName: storyDisplayName,
+        filePath: relativePath,
+      });
+    }
+  }
+
+  return root;
+}
+
+/**
+ * Render tree node to HTML
+ */
+function renderTreeNode(node: TreeNode, depth: number = 0): string {
+  let html = "";
+
+  // Render subdirectories (hierarchy from story names)
+  const sortedDirs = Array.from(node.children.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+
+  for (const [dirName, childNode] of sortedDirs) {
+    const dirId = `dir_${dirName.replaceAll(/[^a-zA-Z\d]/g, "_")}_${depth}`;
+    html += `
+      <li class="dir-item">
+        <div class="dir-header" data-dir-id="${dirId}">
+          <span class="dir-chevron">▶</span>
+          <span class="folder-icon">📁</span>
+          <span class="dir-name">${dirName}</span>
+        </div>
+        <ul class="dir-children">
+          ${renderTreeNode(childNode, depth + 1)}
+        </ul>
+      </li>
+    `;
+  }
+
+  // Render stories in this node
+  const sortedStories = node.stories.sort((a, b) =>
+    a.storyName.localeCompare(b.storyName),
+  );
+
+  for (const story of sortedStories) {
+    html += `
+      <li class="story-item" data-story-id="${story.storyId}">
+        <span class="story-icon">📄</span>
+        <span class="story-name">${story.storyName}</span>
+      </li>
+    `;
+  }
+
+  return html;
+}
+
+/**
+ * Generate HTML page
  */
 export function generateHtmlPage(
   urls: GeneratedBlockKitUrl[],
@@ -31,7 +129,7 @@ export function generateHtmlPage(
   projectName: string,
   fileExtension: string,
 ): string {
-  // ファイルパスでグループ化
+  // Group by file path
   const groupedByFile: Record<string, GeneratedBlockKitUrl[]> = {};
   for (const url of urls) {
     if (!groupedByFile[url.filePath]) {
@@ -40,40 +138,11 @@ export function generateHtmlPage(
     groupedByFile[url.filePath]!.push(url);
   }
 
-  // サイドバーのファイルツリーを生成
-  const sidebarItems = Object.entries(groupedByFile)
-    .map(([filePath, fileUrls]) => {
-      const relativePath = path.relative(baseDir, filePath);
-      const fileName = path.basename(relativePath, fileExtension);
-      const fileId = relativePath.replaceAll(/[^a-zA-Z\d]/g, "_");
+  // Build story tree from story names and render sidebar
+  const tree = buildStoryTree(groupedByFile, baseDir);
+  const sidebarItems = renderTreeNode(tree);
 
-      const storyItems = fileUrls
-        .map((urlData, index) => {
-          const storyId = `${fileId}_${index}`;
-          return `
-          <li class="story-item" data-story-id="${storyId}">
-            <span class="story-icon">📄</span>
-            <span class="story-name">${urlData.storyName}</span>
-          </li>
-        `;
-        })
-        .join("");
-
-      return `
-      <li class="file-item">
-        <div class="file-header" data-file-id="${fileId}">
-          <span class="folder-icon">📁</span>
-          <span class="file-name">${fileName}</span>
-        </div>
-        <ul class="story-list">
-          ${storyItems}
-        </ul>
-      </li>
-    `;
-    })
-    .join("");
-
-  // ストーリー詳細データをJSON化
+  // Convert story detail data to JSON
   const storyData: StoryData[] = Object.entries(groupedByFile).flatMap(
     ([filePath, fileUrls]) => {
       const relativePath = path.relative(baseDir, filePath);
@@ -103,7 +172,7 @@ export function generateHtmlPage(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Slack Block Book - ${projectName}</title>
+  <title>SlackBlockbook - ${projectName}</title>
   <style>
 ${styles}
   </style>
@@ -128,7 +197,7 @@ ${styles}
         <rect x="12" y="22" width="8" height="8" rx="1.5" fill="#E01E5A"/>
         <rect x="22" y="22" width="8" height="8" rx="1.5" fill="#ECB22E"/>
       </svg>
-      <span>Slack Block Book</span>
+      <span>SlackBlockbook</span>
     </div>
     <div class="header-divider"></div>
     <div class="project-name">${projectName}</div>
@@ -178,9 +247,9 @@ ${styles}
         <div id="variant-display">
           <div class="empty-canvas">
             <div class="empty-icon">👈</div>
-            <div class="empty-title">バリアントを選択してください</div>
+            <div class="empty-title">Select a variant</div>
             <div class="empty-description">
-              左のサイドバーからコンポーネントを選択すると、Block Kit Builder URLが表示されます
+              Select a component from the sidebar to display Block Kit Builder URL
             </div>
           </div>
         </div>
@@ -188,10 +257,10 @@ ${styles}
             : `
         <div class="empty-canvas">
           <div class="empty-icon">🔍</div>
-          <div class="empty-title">${fileExtension} ファイルが見つかりません</div>
+          <div class="empty-title">No ${fileExtension} files found</div>
           <div class="empty-description">
-            検索ディレクトリ内に
-            <span class="empty-code">${fileExtension}</span> ファイルを作成してください
+            Create a
+            <span class="empty-code">${fileExtension}</span> file in the search directory
           </div>
         </div>
         `

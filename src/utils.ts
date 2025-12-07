@@ -4,13 +4,13 @@ import path from "node:path";
 import type { BlockKitStory, GeneratedBlockKitUrl } from "./types";
 
 /**
- * Block Kit JSONをBlock Kit Builder URLに変換
+ * Convert Block Kit JSON to Block Kit Builder URL
  */
 export function generateBlockKitUrl(
   workspaceId: string,
   payload: unknown,
 ): string {
-  // payloadがblocks配列の場合は { blocks: payload } でラップ
+  // Wrap payload in { blocks: payload } if it's a blocks array
   let normalizedPayload = payload;
   if (Array.isArray(payload)) {
     normalizedPayload = { blocks: payload };
@@ -21,7 +21,7 @@ export function generateBlockKitUrl(
 }
 
 /**
- * Block Kit JSONかどうかをチェック
+ * Check if the object is a valid Block Kit JSON
  */
 export function isBlockKitJson(obj: unknown): boolean {
   if (typeof obj !== "object" || obj === null) {
@@ -41,7 +41,7 @@ export function isBlockKitJson(obj: unknown): boolean {
 }
 
 /**
- * ストーリーからBlock Kit URLを生成
+ * Generate Block Kit URL from a story
  */
 export function createUrlFromStory(
   story: BlockKitStory,
@@ -54,12 +54,12 @@ export function createUrlFromStory(
   customArgs?: Record<string, unknown>,
 ): GeneratedBlockKitUrl {
   try {
-    // args が指定されている場合は customArgs または story.args を使用
+    // Use customArgs or story.args if args is specified
     const args = customArgs ?? story.args;
     const blockKitJson = args ? story.component(args) : story.component();
 
     if (!isBlockKitJson(blockKitJson)) {
-      logger?.warn(`[WARNING] ${story.name} はBlock Kit JSONではありません`);
+      logger?.warn(`[WARNING] ${story.name} is not valid Block Kit JSON`);
     }
 
     const url = generateBlockKitUrl(workspaceId, blockKitJson);
@@ -89,18 +89,23 @@ export function createUrlFromStory(
 }
 
 /**
- * ディレクトリを再帰的に検索して指定拡張子のファイルを見つける
+ * Recursively search directory to find files with specified extension
  */
 export function findBlockKitFiles(
   dir: string,
   fileExtension: string,
 ): string[] {
   const results: string[] = [];
+  const ignoreDirs = ["node_modules", ".git", "dist", ".next", ".nuxt"];
 
   try {
     const entries = readdirSync(dir);
 
     for (const entry of entries) {
+      if (ignoreDirs.includes(entry)) {
+        continue;
+      }
+
       const fullPath = path.join(dir, entry);
       try {
         const stat = statSync(fullPath);
@@ -111,18 +116,18 @@ export function findBlockKitFiles(
           results.push(fullPath);
         }
       } catch {
-        // スキップ
+        // skip
       }
     }
   } catch {
-    // スキップ
+    // skip
   }
 
   return results;
 }
 
 /**
- * 全ての.blockkit.tsxファイルからストーリーを収集
+ * Collect stories from all .blockkit.tsx files
  */
 export async function collectAllStories(
   searchDir: string,
@@ -140,8 +145,8 @@ export async function collectAllStories(
 
   for (const filePath of blockKitFiles) {
     try {
-      // 動的インポート（キャッシュバスティングのためタイムスタンプとランダム値を追加）
-      // ESMのモジュールキャッシュを確実に回避するため、複数のパラメータを使用
+      // Dynamic import with cache busting (timestamp and random value)
+      // Using multiple parameters to ensure ESM module cache is bypassed
       const cacheBuster = `t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
       const importUrl = `${filePath}?${cacheBuster}`;
 
@@ -172,7 +177,7 @@ export async function collectAllStories(
 }
 
 /**
- * 特定のストーリーをカスタム args で再レンダリング
+ * Re-render a specific story with custom args
  */
 export async function renderStoryWithArgs(
   filePath: string,
@@ -187,10 +192,10 @@ export async function renderStoryWithArgs(
   baseDir?: string,
 ): Promise<{ blockKitJson?: unknown; url?: string; error?: string }> {
   try {
-    // 相対パスを絶対パスに変換
+    // Convert relative path to absolute path
     const absolutePath = baseDir ? path.resolve(baseDir, filePath) : filePath;
 
-    // 動的インポート（キャッシュバスティング）
+    // Dynamic import with cache busting
     const cacheBuster = `t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
     const importUrl = `${absolutePath}?${cacheBuster}`;
 
@@ -207,7 +212,7 @@ export async function renderStoryWithArgs(
       return { error: `Story "${storyName}" not found` };
     }
 
-    // args を使ってコンポーネントをレンダリング
+    // Render component with args
     const blockKitJson = story.component(args);
 
     if (!isBlockKitJson(blockKitJson)) {

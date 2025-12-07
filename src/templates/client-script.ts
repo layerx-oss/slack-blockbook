@@ -1,5 +1,5 @@
 /**
- * Block Kit Preview クライアント側のスクリプト
+ * Block Kit Preview client-side script
  */
 
 interface StoryData {
@@ -17,10 +17,10 @@ interface StoryData {
 
 export function generateClientScript(storyData: StoryData[]): string {
   return `
-    // ストーリーデータ
+    // Story data
     const STORY_DATA = ${JSON.stringify(storyData)};
 
-    // 現在のargs（ストーリーごとに保持）
+    // Current args (persisted per story)
     const currentArgs = {};
 
     // JSON syntax highlighting
@@ -46,7 +46,7 @@ export function generateClientScript(storyData: StoryData[]): string {
       });
     }
 
-    // コントロールHTMLを生成
+    // Generate controls HTML
     function generateControlsHtml(variant) {
       console.log('generateControlsHtml called for variant:', variant.name);
       console.log('argTypes:', variant.argTypes);
@@ -170,7 +170,7 @@ export function generateClientScript(storyData: StoryData[]): string {
       \`;
     }
 
-    // バリアント表示を更新
+    // Update variant display
     function updateStoryDisplay(storyId, updateUrl = true) {
       const variant = STORY_DATA.find(v => v.id === storyId);
       if (!variant) return;
@@ -189,7 +189,7 @@ export function generateClientScript(storyData: StoryData[]): string {
       let contentHtml = '';
 
       if (variant.error) {
-        contentHtml = \`<div class="error-message">⚠️ エラー: \${variant.error}</div>\`;
+        contentHtml = \`<div class="error-message">⚠️ Error: \${variant.error}</div>\`;
       } else {
         const actionButtonHtml = \`
           <a href="\${variant.url}" target="_blank" class="action-button" id="open-builder-\${storyId}">
@@ -223,7 +223,7 @@ export function generateClientScript(storyData: StoryData[]): string {
         </div>
       \`;
 
-      // Block Kit JSONをセット
+      // Set Block Kit JSON
       if (!variant.error && variant.blockKitJson) {
         const jsonElement = document.getElementById(\`json-content-\${storyId}\`);
         if (jsonElement) {
@@ -231,19 +231,19 @@ export function generateClientScript(storyData: StoryData[]): string {
         }
       }
 
-      // Controlsフッターを常に表示
+      // Always show Controls footer
       let controlsFooter = document.getElementById('controls-footer');
 
       if (!controlsFooter) {
-        // フッターが存在しない場合は作成
+        // Create footer if it doesn't exist
         const footer = document.createElement('div');
         footer.innerHTML = generateControlsHtml(variant);
         document.body.appendChild(footer.firstElementChild);
-        // トグル機能をセットアップ
+        // Setup toggle functionality
         setupControlsToggle();
         controlsFooter = document.getElementById('controls-footer');
       } else {
-        // 既存のフッターの内容を更新
+        // Update existing footer content
         const controlsPanel = controlsFooter.querySelector('.controls-panel');
         if (controlsPanel) {
           const newContent = generateControlsHtml(variant);
@@ -256,22 +256,22 @@ export function generateClientScript(storyData: StoryData[]): string {
         }
       }
 
-      // argTypesがある場合のみイベントリスナーを設定
+      // Setup event listeners only if argTypes exist
       if (variant.argTypes && Object.keys(variant.argTypes).length > 0) {
         setupControlListeners(storyId, variant);
       }
 
-      // 常に表示
+      // Always show
       if (controlsFooter) {
         controlsFooter.style.display = 'block';
       }
 
-      // アクティブ状態を更新
+      // Update active state
       document.querySelectorAll('.story-item').forEach(el => {
         el.classList.toggle('active', el.dataset.storyId === storyId);
       });
 
-      // URLを更新（history.pushState）
+      // Update URL (history.pushState)
       if (updateUrl) {
         const url = new URL(window.location);
         url.searchParams.set('variant', storyId);
@@ -279,7 +279,7 @@ export function generateClientScript(storyData: StoryData[]): string {
       }
     }
 
-    // Controlsフッターのトグル機能
+    // Controls footer toggle functionality
     function setupControlsToggle() {
       const toggle = document.getElementById('controls-toggle');
       const footer = document.getElementById('controls-footer');
@@ -291,17 +291,17 @@ export function generateClientScript(storyData: StoryData[]): string {
       }
     }
 
-    // コントロールのイベントリスナーを設定
+    // Setup control event listeners
     function setupControlListeners(storyId, variant) {
       const panel = document.getElementById('controls-panel');
       if (!panel) return;
 
-      // 現在のargsを初期化
+      // Initialize current args
       if (!currentArgs[storyId]) {
         currentArgs[storyId] = { ...variant.args };
       }
 
-      // 各コントロールにイベントリスナーを追加
+      // Add event listeners to each control
       panel.querySelectorAll('[data-arg-key]').forEach(input => {
         const key = input.dataset.argKey;
         const argType = variant.argTypes[key];
@@ -316,16 +316,16 @@ export function generateClientScript(storyData: StoryData[]): string {
             value = e.target.value;
           }
 
-          // argsを更新
+          // Update args
           currentArgs[storyId][key] = value;
 
-          // 再レンダリング
+          // Re-render
           await rerenderStory(storyId, variant, currentArgs[storyId]);
         });
       });
     }
 
-    // バリアントを再レンダリング
+    // Re-render variant
     async function rerenderStory(storyId, variant, args) {
       try {
         console.log('🔄 Re-rendering variant:', variant.name);
@@ -353,14 +353,14 @@ export function generateClientScript(storyData: StoryData[]): string {
           return;
         }
 
-        // Block Kit JSONとURLを更新
+        // Update Block Kit JSON and URL
         const jsonElement = document.getElementById(\`json-content-\${storyId}\`);
         if (jsonElement && result.blockKitJson) {
           console.log('✅ Updating JSON preview');
           jsonElement.innerHTML = syntaxHighlight(result.blockKitJson);
         }
 
-        // "Open in Block Kit Builder" ボタンのURLを更新
+        // Update "Open in Block Kit Builder" button URL
         const buttonElement = document.getElementById(\`open-builder-\${storyId}\`);
         if (buttonElement && result.url) {
           console.log('✅ Updating builder URL');
@@ -371,75 +371,92 @@ export function generateClientScript(storyData: StoryData[]): string {
       }
     }
 
-    // クリックイベントリスナー
+    // Click event listeners
     document.querySelectorAll('.story-item').forEach(item => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const storyId = item.dataset.storyId;
         updateStoryDisplay(storyId);
       });
     });
 
-    // ブラウザの戻る/進むボタンに対応
+    // Directory toggle functionality
+    document.querySelectorAll('.dir-header').forEach(header => {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dirItem = header.closest('.dir-item');
+        if (dirItem) {
+          dirItem.classList.toggle('expanded');
+        }
+      });
+    });
+
+    // Expand all directories by default
+    document.querySelectorAll('.dir-item').forEach(item => {
+      item.classList.add('expanded');
+    });
+
+    // Handle browser back/forward buttons
     window.addEventListener('popstate', (event) => {
       if (event.state && event.state.storyId) {
         updateStoryDisplay(event.state.storyId, false);
       }
     });
 
-    // 初期選択（URLパラメータまたは最初のバリアント）
+    // Initial selection (URL parameter or first variant)
     if (STORY_DATA.length > 0) {
       setTimeout(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const storyIdFromUrl = urlParams.get('variant');
 
-        // URLパラメータにstoryIdがあり、そのバリアントが存在する場合はそれを表示
+        // Display variant from URL parameter if it exists
         if (storyIdFromUrl && STORY_DATA.find(v => v.id === storyIdFromUrl)) {
           updateStoryDisplay(storyIdFromUrl, false);
         } else {
-          // それ以外は最初のバリアントを表示
+          // Otherwise display first variant
           updateStoryDisplay(STORY_DATA[0].id);
         }
       }, 100);
     }
 
-    // ホットリロード機能 (SSE)
+    // Hot reload functionality (SSE)
     const eventSource = new EventSource('/events');
 
     eventSource.onmessage = (event) => {
       if (event.data === 'reload') {
         console.log('🔄 File changed. Reloading page...');
-        // 現在のURLをそのままリロード（クエリパラメータも保持される）
+        // Reload current URL (query parameters preserved)
         window.location.reload();
       }
     };
 
     eventSource.onerror = (error) => {
-      console.error('SSE接続エラー:', error);
-      // 接続が切れた場合は再接続を試みる
+      console.error('SSE connection error:', error);
+      // Try to reconnect if connection is lost
       eventSource.close();
       setTimeout(() => {
         window.location.reload();
       }, 1000);
     };
 
-    // ページを離れる時に接続を閉じる
+    // Close connection when leaving page
     window.addEventListener('beforeunload', () => {
       eventSource.close();
     });
 
-    // サイドバーのリサイズ機能
+    // Sidebar resize functionality
     (function setupSidebarResize() {
       const sidebar = document.getElementById('sidebar');
       const resizer = document.getElementById('sidebar-resizer');
 
       if (!sidebar || !resizer) return;
 
-      // CSS変数を初期化
+      // Initialize CSS variable
       function updateSidebarWidth(width) {
         document.documentElement.style.setProperty('--sidebar-width', width + 'px');
       }
 
-      // 初期幅を設定
+      // Set initial width
       updateSidebarWidth(sidebar.offsetWidth);
 
       let isResizing = false;
@@ -462,7 +479,7 @@ export function generateClientScript(storyData: StoryData[]): string {
         const deltaX = e.clientX - startX;
         const newWidth = startWidth + deltaX;
 
-        // 幅の制限（min-width, max-widthに合わせる）
+        // Width constraints (match min-width, max-width)
         const minWidth = 200;
         const maxWidth = 600;
         const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));

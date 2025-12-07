@@ -1,12 +1,10 @@
-#!/usr/bin/env node
-
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Slack Block Book CLI
+ * SlackBlockbook CLI
  * tsx watch を内部で実行するラッパー
  */
 
@@ -42,22 +40,22 @@ function main() {
     process.exit(1);
   }
 
-  // tsconfig オプションを探す
+  // Find tsconfig option
   const tsconfigIndex = args.indexOf("--tsconfig");
   let tsconfigPath: string | undefined;
 
   if (tsconfigIndex !== -1 && args[tsconfigIndex + 1]) {
-    // ユーザー指定のtsconfig
+    // User-specified tsconfig
     tsconfigPath = args[tsconfigIndex + 1];
   } else {
-    // デフォルト: パッケージのtsconfig.scripts.jsonを使用
+    // Default: use package's tsconfig.scripts.json
     const defaultTsconfig = path.join(__dirname, "../tsconfig.scripts.json");
     if (existsSync(defaultTsconfig)) {
       tsconfigPath = defaultTsconfig;
     }
   }
 
-  // tsx watch コマンドを構築
+  // Build tsx watch command
   const tsxArgs = ["watch"];
 
   if (tsconfigPath) {
@@ -66,14 +64,14 @@ function main() {
 
   tsxArgs.push(scriptPath);
 
-  console.log(`🚀 Starting Slack Block Book Server...`);
+  console.log(`🚀 Starting SlackBlockbook Server...`);
   console.log(`📝 Script: ${scriptPath}`);
   if (tsconfigPath) {
     console.log(`⚙️  TSConfig: ${tsconfigPath}`);
   }
   console.log("");
 
-  // tsx を実行
+  // Execute tsx
   const child = spawn("tsx", tsxArgs, {
     stdio: "inherit",
     shell: true,
@@ -91,7 +89,7 @@ function main() {
     }
   });
 
-  // シグナルハンドリング
+  // Signal handling
   process.on("SIGINT", () => {
     child.kill("SIGINT");
   });

@@ -11,7 +11,7 @@ import { createUrlFromStory, findBlockKitFiles, isBlockKitJson } from "./utils";
 const DEFAULT_FILE_EXTENSION = ".blockkit.tsx";
 
 /**
- * 生成されたURLをマークダウン形式で出力
+ * Output generated URLs in markdown format
  */
 function generateMarkdown(
   urls: GeneratedBlockKitUrl[],
@@ -19,9 +19,9 @@ function generateMarkdown(
   timestamp: string,
 ): string {
   let markdown = `# Slack Block Kit Builder URLs\n\n`;
-  markdown += `生成日時: ${timestamp}\n\n`;
+  markdown += `Generated: ${timestamp}\n\n`;
 
-  // ファイルパスでグループ化
+  // Group by file path
   const groupedByFile: Record<string, GeneratedBlockKitUrl[]> = {};
   for (const url of urls) {
     if (!groupedByFile[url.filePath]) {
@@ -33,7 +33,7 @@ function generateMarkdown(
   let successCount = 0;
   let errorCount = 0;
 
-  // ファイルごとに出力
+  // Output for each file
   for (const [filePath, fileUrls] of Object.entries(groupedByFile)) {
     const relativePath = path.relative(baseDir, filePath);
     markdown += `## ${relativePath}\n\n`;
@@ -46,11 +46,11 @@ function generateMarkdown(
       }
 
       if (urlData.tags && urlData.tags.length > 0) {
-        markdown += `タグ: ${urlData.tags.map((tag) => `\`${tag}\``).join(", ")}\n\n`;
+        markdown += `Tags: ${urlData.tags.map((tag) => `\`${tag}\``).join(", ")}\n\n`;
       }
 
       if (urlData.error) {
-        markdown += `⚠️ エラー: ${urlData.error}\n\n`;
+        markdown += `⚠️ Error: ${urlData.error}\n\n`;
         errorCount++;
       } else {
         markdown += `[Block Kit Builderで開く](${urlData.url})\n\n`;
@@ -61,17 +61,17 @@ function generateMarkdown(
     markdown += `---\n\n`;
   }
 
-  // 統計情報
-  markdown += `## 統計情報\n\n`;
-  markdown += `- 処理ファイル数: ${Object.keys(groupedByFile).length}\n`;
-  markdown += `- 生成URL数: ${successCount}\n`;
-  markdown += `- エラー数: ${errorCount}\n`;
+  // Statistics
+  markdown += `## Statistics\n\n`;
+  markdown += `- Files processed: ${Object.keys(groupedByFile).length}\n`;
+  markdown += `- URLs generated: ${successCount}\n`;
+  markdown += `- Errors: ${errorCount}\n`;
 
   return markdown;
 }
 
 /**
- * Block Kit Builder URLをマークダウンファイルに生成
+ * Generate Block Kit Builder URLs to markdown file
  */
 export async function generateBlockKitUrls(
   config: BlockKitGeneratorConfig,
@@ -79,69 +79,69 @@ export async function generateBlockKitUrls(
   const fileExtension = config.fileExtension ?? DEFAULT_FILE_EXTENSION;
   const baseDir = config.baseDir ?? process.cwd();
 
-  console.log(`🔍 ${fileExtension} ファイルを検索中...`);
+  console.log(`🔍 Searching for ${fileExtension} files...`);
 
   const blockKitFiles = findBlockKitFiles(config.searchDir, fileExtension);
 
-  console.log(`✅ ${blockKitFiles.length}個のファイルを発見しました\n`);
+  console.log(`✅ Found ${blockKitFiles.length} file(s)\n`);
 
   if (blockKitFiles.length === 0) {
-    console.log(`⚠️  ${fileExtension} ファイルが見つかりませんでした`);
-    console.log(`   例: WorkflowLoadingModal${fileExtension}`);
+    console.log(`⚠️  No ${fileExtension} files found`);
+    console.log(`   Example: WorkflowLoadingModal${fileExtension}`);
     return;
   }
 
   const generatedUrls: GeneratedBlockKitUrl[] = [];
 
-  // 各.blockkit.tsxファイルを処理
+  // Process each .blockkit.tsx file
   for (const filePath of blockKitFiles) {
     const relativePath = path.relative(baseDir, filePath);
-    console.log(`📄 ${relativePath} を処理中...`);
+    console.log(`📄 Processing ${relativePath}...`);
 
     try {
-      // 動的インポート
+      // Dynamic import
       const module = await import(filePath);
 
       if (!module.stories || !Array.isArray(module.stories)) {
         console.log(
-          `  ⚠️  ${relativePath} には stories エクスポートがありません`,
+          `  ⚠️  ${relativePath} has no stories export`,
         );
         continue;
       }
 
       const stories = module.stories as BlockKitStory[];
-      console.log(`  見つかったストーリー: ${stories.length}個`);
+      console.log(`  Found ${stories.length} story(s)`);
 
-      // 各ストーリーを処理
+      // Process each story
       for (const story of stories) {
-        console.log(`  - ${story.name} を処理中...`);
+        console.log(`  - Processing ${story.name}...`);
         const url = createUrlFromStory(story, filePath, config.workspaceId, {
           warn: (message: string) => console.warn(`    ${message}`),
           log: (message: string) => console.log(`    ${message}`),
         });
         generatedUrls.push(url);
 
-        // Block Kit JSONのバリデーション結果を表示
+        // Display Block Kit JSON validation result
         try {
           const blockKitJson = story.component();
           if (isBlockKitJson(blockKitJson)) {
             console.log(
-              `    [SUCCESS] ${story.name} は有効なBlock Kit JSONです`,
+              `    [SUCCESS] ${story.name} is valid Block Kit JSON`,
             );
           } else {
             console.log(
-              `    [WARNING] ${story.name} はBlock Kit JSONではないかもしれません`,
+              `    [WARNING] ${story.name} may not be valid Block Kit JSON`,
             );
           }
         } catch {
-          // エラーは既に url.error に格納されている
+          // Error is already stored in url.error
         }
       }
 
-      console.log(`✅ ${relativePath} の処理が完了しました\n`);
+      console.log(`✅ Completed processing ${relativePath}\n`);
     } catch (err) {
       console.error(
-        `❌ ${relativePath} の処理に失敗:`,
+        `❌ Failed to process ${relativePath}:`,
         err instanceof Error ? err.message : err,
       );
       console.error("");
@@ -149,13 +149,13 @@ export async function generateBlockKitUrls(
   }
 
   if (generatedUrls.length === 0) {
-    console.log("⚠️  URLを生成できませんでした");
+    console.log("⚠️  No URLs generated");
     return;
   }
 
-  console.log(`\n📝 マークダウンファイルを生成中...`);
+  console.log(`\n📝 Generating markdown file...`);
 
-  // 現在時刻を取得
+  // Get current time
   const now = new Date();
   const timestamp = now.toLocaleString("ja-JP", {
     year: "numeric",
@@ -166,14 +166,14 @@ export async function generateBlockKitUrls(
     second: "2-digit",
   });
 
-  // マークダウンを生成
+  // Generate markdown
   const markdown = generateMarkdown(generatedUrls, baseDir, timestamp);
 
-  // ファイルに書き出し
+  // Write to file
   writeFileSync(config.outputPath, markdown, "utf8");
 
-  console.log(`✅ マークダウンファイルを生成しました: ${config.outputPath}`);
+  console.log(`✅ Markdown file generated: ${config.outputPath}`);
   console.log(
-    `\n📊 統計: ${generatedUrls.filter((u) => !u.error).length}個のURLを生成しました`,
+    `\n📊 Stats: Generated ${generatedUrls.filter((u) => !u.error).length} URL(s)`,
   );
 }

@@ -1,5 +1,5 @@
 /**
- * Block Kit Preview UI のスタイル定義
+ * Block Kit Preview UI style definitions
  */
 export const styles = `
   * {
@@ -15,7 +15,7 @@ export const styles = `
     overflow: hidden;
   }
 
-  /* ヘッダー */
+  /* Header */
   .header {
     background: #4A154B;
     color: white;
@@ -53,14 +53,14 @@ export const styles = `
     opacity: 0.9;
   }
 
-  /* レイアウト */
+  /* Layout */
   .app-layout {
     display: flex;
     height: calc(100vh - 64px);
     overflow: hidden;
   }
 
-  /* サイドバー */
+  /* Sidebar */
   .sidebar {
     width: 280px;
     min-width: 200px;
@@ -167,7 +167,75 @@ export const styles = `
     font-size: 0.875rem;
   }
 
-  /* メインエリア */
+  /* Directory tree */
+  .dir-item {
+    margin-bottom: 0.25rem;
+  }
+
+  .dir-header {
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #333;
+    transition: background 0.2s;
+  }
+
+  .dir-header:hover {
+    background: rgba(102, 126, 234, 0.1);
+  }
+
+  .dir-chevron {
+    font-size: 0.625rem;
+    color: #888;
+    transition: transform 0.2s;
+    width: 0.75rem;
+    text-align: center;
+  }
+
+  .dir-item.expanded > .dir-header .dir-chevron {
+    transform: rotate(90deg);
+  }
+
+  .dir-children {
+    list-style: none;
+    padding-left: 1rem;
+    display: none;
+  }
+
+  .dir-item.expanded > .dir-children {
+    display: block;
+  }
+
+  .file-chevron {
+    font-size: 0.625rem;
+    color: #888;
+    transition: transform 0.2s;
+    width: 0.75rem;
+    text-align: center;
+  }
+
+  .file-item.expanded > .file-header .file-chevron {
+    transform: rotate(90deg);
+  }
+
+  .file-item > .story-list {
+    display: none;
+    padding-left: 1.5rem;
+  }
+
+  .file-item.expanded > .story-list {
+    display: block;
+  }
+
+  .file-icon {
+    font-size: 0.875rem;
+  }
+
+  /* Main area */
   .main-content {
     flex: 1;
     overflow-y: auto;
@@ -206,7 +274,7 @@ export const styles = `
     padding: 2rem;
   }
 
-  /* ストーリー詳細 */
+  /* Story details */
   .story-detail {
     background: white;
     border-radius: 8px;
@@ -291,7 +359,7 @@ export const styles = `
     font-size: 0.875rem;
   }
 
-  /* 空の状態 */
+  /* Empty state */
   .empty-canvas {
     display: flex;
     flex-direction: column;
@@ -329,7 +397,7 @@ export const styles = `
     color: #FF4785;
   }
 
-  /* JSONプレビュー */
+  /* JSON Preview */
   .preview-container {
     margin-bottom: 1.5rem;
     border: 1px solid #e0e0e0;

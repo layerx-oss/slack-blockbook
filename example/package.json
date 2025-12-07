@@ -1,0 +1,16 @@
+{
+  "name": "slack-blockbook-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch blockbook.ts",
+    "start": "tsx blockbook.ts"
+  },
+  "dependencies": {
+    "jsx-slack": "^6.0.0",
+    "slack-blockbook": "link:.."
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0"
+  }
+}

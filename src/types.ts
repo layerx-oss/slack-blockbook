@@ -1,5 +1,5 @@
 /**
- * Block Kit Builder URL生成用の型定義
+ * Type definitions for Block Kit Builder URL generation
  */
 
 /**
@@ -21,192 +21,192 @@ export type ArgType =
 
 export interface BlockKitStory<TArgs = Record<string, unknown>> {
   /**
-   * ストーリーの名前（日本語OK）
-   * 例: "承認取得中", "エラー状態"
+   * Story name
+   * @example "Loading", "Error State"
    */
   name: string;
 
   /**
-   * ストーリーの説明（オプション）
+   * Story description (optional)
    */
   description?: string;
 
   /**
-   * Block Kit JSONを返すコンポーネント
-   * args が指定されている場合は (args: TArgs) => unknown
-   * args がない場合は () => unknown
+   * Component that returns Block Kit JSON
+   * With args: (args: TArgs) => unknown
+   * Without args: () => unknown
    */
   component: (args?: TArgs) => unknown;
 
   /**
-   * Block Kit Builderで表示するタグ（オプション）
+   * Tags to display in Block Kit Builder (optional)
    */
   tags?: string[];
 
   /**
-   * デフォルトの引数（Storybook の args と同じ）
+   * Default arguments (same as Storybook's args)
    */
   args?: TArgs;
 
   /**
-   * 引数の型定義（Storybook の argTypes と同じ）
+   * Argument type definitions (same as Storybook's argTypes)
    */
   argTypes?: Record<keyof TArgs, ArgType>;
 }
 
 /**
- * 生成されたBlock Kit Builder URL情報
+ * Generated Block Kit Builder URL information
  */
 export interface GeneratedBlockKitUrl {
   /**
-   * ファイルパス（相対パス）
+   * File path (relative path)
    */
   filePath: string;
 
   /**
-   * ストーリー名
+   * Story name
    */
   storyName: string;
 
   /**
-   * ストーリーの説明
+   * Story description
    */
   description?: string;
 
   /**
-   * 生成されたBlock Kit Builder URL
+   * Generated Block Kit Builder URL
    */
   url: string;
 
   /**
-   * Block Kit JSON（プレビュー表示用）
+   * Block Kit JSON (for preview display)
    */
   blockKitJson?: unknown;
 
   /**
-   * エラーメッセージ（エラー時のみ）
+   * Error message (only when error occurs)
    */
   error?: string;
 
   /**
-   * タグ
+   * Tags
    */
   tags?: string[];
 
   /**
-   * デフォルトの引数
+   * Default arguments
    */
   args?: Record<string, unknown>;
 
   /**
-   * 引数の型定義
+   * Argument type definitions
    */
   argTypes?: Record<string, ArgType>;
 }
 
 /**
- * Block Kit Preview Serverの設定
+ * Block Kit Preview Server configuration
  */
 export interface BlockKitPreviewConfig {
   /**
-   * サーバーポート
+   * Server port
    * @default 5176
    */
   port?: number;
 
   /**
-   * Slack ワークスペースID
+   * Slack workspace ID
    * @example "TBQ48385T"
    */
   workspaceId: string;
 
   /**
-   * Block Kit定義ファイルを検索するディレクトリ（絶対パス）
+   * Directory to search for Block Kit definition files (absolute path)
    * @example "/path/to/project/src/server/slack/jsx"
    */
   searchDir: string;
 
   /**
-   * Block Kit定義ファイルの拡張子
+   * Block Kit definition file extension
    * @default ".blockkit.tsx"
    */
   fileExtension?: string;
 
   /**
-   * プロジェクト名（ヘッダーに表示）
+   * Project name (displayed in header)
    * @example "attendance-webapp"
    */
   projectName?: string;
 
   /**
-   * 相対パスの基準ディレクトリ（絶対パス）
+   * Base directory for relative paths (absolute path)
    * @default process.cwd()
    */
   baseDir?: string;
 
   /**
-   * ホットリロード時に監視する追加のファイルパターン
-   * *.blockkit.tsx がimportしているファイルも監視対象にする場合に使用
-   * @example ["**\/*.tsx", "**\/*.ts"] - searchDir配下の全てのTSファイルを監視
-   * @default undefined - *.blockkit.tsx のみを監視
+   * Additional file patterns to watch for hot reload
+   * Use when files imported by *.blockkit.tsx should also be watched
+   * @example ["**\/*.tsx", "**\/*.ts"] - Watch all TS files under searchDir
+   * @default undefined - Only watch *.blockkit.tsx files
    */
   watchPatterns?: string[];
 
   /**
-   * ファイル変更時にプロセスを再起動するかどうか
-   * trueの場合、tsx watch などのwatchモードと組み合わせて使用すること
+   * Whether to restart process on file change
+   * When true, use with watch mode like tsx watch
    * @default false
    */
   restartOnChange?: boolean;
 }
 
 /**
- * Block Kit URL生成の設定
+ * Block Kit URL generator configuration
  */
 export interface BlockKitGeneratorConfig {
   /**
-   * Slack ワークスペースID
+   * Slack workspace ID
    * @example "TBQ48385T"
    */
   workspaceId: string;
 
   /**
-   * Block Kit定義ファイルを検索するディレクトリ（絶対パス）
+   * Directory to search for Block Kit definition files (absolute path)
    * @example "/path/to/project/src/server/slack/jsx"
    */
   searchDir: string;
 
   /**
-   * Block Kit定義ファイルの拡張子
+   * Block Kit definition file extension
    * @default ".blockkit.tsx"
    */
   fileExtension?: string;
 
   /**
-   * 出力先ファイルパス（絶対パス）
+   * Output file path (absolute path)
    * @example "/path/to/project/z/block-kit-urls.md"
    */
   outputPath: string;
 
   /**
-   * 相対パスの基準ディレクトリ（絶対パス）
+   * Base directory for relative paths (absolute path)
    * @default process.cwd()
    */
   baseDir?: string;
 }
 
 /**
- * ヘルパー関数: 型推論を効かせてストーリーを定義
+ * Helper function: Define a story with type inference
  *
  * @example
- * // 引数なしのストーリー
+ * // Story without args
  * createStory({
  *   name: "Loading",
  *   component: () => LoadingModal(),
  * })
  *
  * @example
- * // 引数ありのストーリー
+ * // Story with args
  * createStory<{ type: string }>({
  *   name: "Modal",
  *   args: { type: "info" },

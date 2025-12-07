@@ -13,7 +13,7 @@ const DEFAULT_PORT = 5176;
 const DEFAULT_FILE_EXTENSION = ".blockkit.tsx";
 
 /**
- * Block Kit Preview Serverを起動
+ * Start Block Kit Preview Server
  */
 export async function startBlockKitPreviewServer(
   config: BlockKitPreviewConfig,
@@ -23,17 +23,17 @@ export async function startBlockKitPreviewServer(
   const projectName = config.projectName ?? "Block Kit Preview";
   const baseDir = config.baseDir ?? process.cwd();
 
-  // SSEクライアントを管理
+  // Manage SSE clients
   const sseClients: ServerResponse[] = [];
 
-  // SSEクライアントに通知
+  // Notify SSE clients
   function notifyClients(message: string) {
     for (const client of sseClients) {
       client.write(`data: ${message}\n\n`);
     }
   }
 
-  // リロード通知のデバウンス処理
+  // Debounce reload notification
   let reloadTimeout: NodeJS.Timeout | null = null;
   function scheduleReload(filePath: string) {
     if (reloadTimeout) {
@@ -42,24 +42,24 @@ export async function startBlockKitPreviewServer(
 
     console.log(`🔄 File changed: ${path.relative(baseDir, filePath)}`);
 
-    // 300ms後にリロード通知を送信またはプロセスを再起動
+    // Send reload notification or restart process after 300ms
     reloadTimeout = setTimeout(async () => {
       if (config.restartOnChange) {
-        // プロセス再起動モード: クライアントに通知してから終了
+        // Process restart mode: notify clients then exit
         console.log("🔄 Restarting process to clear module cache...");
         notifyClients("reload");
 
-        // クライアントが通知を受信するまで少し待つ
+        // Wait a bit for clients to receive notification
         await new Promise((resolve) => setTimeout(resolve, 100));
 
-        // プロセスを終了（tsx watchが自動的に再起動）
+        // Exit process (tsx watch will auto-restart)
         await watcher.close();
         server.close(() => {
           console.log("🔄 Exiting process (will restart automatically)");
           process.exit(0);
         });
       } else {
-        // ブラウザリロードモード: クライアントに通知のみ
+        // Browser reload mode: notify clients only
         console.log("📡 Sending reload notification to browser...");
         notifyClients("reload");
       }
@@ -67,12 +67,12 @@ export async function startBlockKitPreviewServer(
     }, 300);
   }
 
-  // ファイル監視を開始
+  // Start file watching
   const watchPatterns: string[] = [
     path.join(config.searchDir, "**", `*${fileExtension}`),
   ];
 
-  // 追加の監視パターンがあれば追加
+  // Add additional watch patterns if specified
   if (config.watchPatterns && config.watchPatterns.length > 0) {
     for (const pattern of config.watchPatterns) {
       watchPatterns.push(path.join(config.searchDir, pattern));
@@ -131,22 +131,22 @@ export async function startBlockKitPreviewServer(
         res.end("Internal Server Error");
       }
     } else if (url.pathname === "/events") {
-      // SSEエンドポイント
+      // SSE endpoint
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       });
 
-      // クライアントを追加
+      // Add client
       sseClients.push(res);
 
-      // 接続維持のために定期的にコメントを送信
+      // Send periodic keepalive to maintain connection
       const keepAliveInterval = setInterval(() => {
         res.write(": keepalive\n\n");
       }, 30_000);
 
-      // クライアント切断時の処理
+      // Handle client disconnect
       req.on("close", () => {
         clearInterval(keepAliveInterval);
         const index = sseClients.indexOf(res);
@@ -155,7 +155,7 @@ export async function startBlockKitPreviewServer(
         }
       });
     } else if (url.pathname === "/render" && req.method === "POST") {
-      // ストーリーを再レンダリングするAPIエンドポイント
+      // API endpoint for re-rendering stories
       let body = "";
       req.on("data", (chunk) => {
         body += chunk.toString();
@@ -215,7 +215,7 @@ export async function startBlockKitPreviewServer(
   server.listen(port, () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════╗
-║  🚀 Slack Block Book Server started!                  ║
+║  🚀 SlackBlockbook Server started!                    ║
 ╚═══════════════════════════════════════════════════════╝
 
   📍 URL: http://localhost:${port}
