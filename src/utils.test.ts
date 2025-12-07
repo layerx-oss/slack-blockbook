@@ -81,10 +81,10 @@ describe("createUrlFromStory", () => {
   });
 
   it("argsを持つストーリーからURLを生成する", () => {
-    const story: BlockKitStory<{ text: string }> = {
+    const story: BlockKitStory = {
       name: "引数付きストーリー",
       component: (args) => ({
-        blocks: [{ type: "section", text: { type: "mrkdwn", text: args?.text ?? "default" } }],
+        blocks: [{ type: "section", text: { type: "mrkdwn", text: (args as { text: string })?.text ?? "default" } }],
       }),
       args: { text: "カスタムテキスト" },
     };
@@ -99,10 +99,10 @@ describe("createUrlFromStory", () => {
   });
 
   it("customArgsでストーリーを上書きできる", () => {
-    const story: BlockKitStory<{ text: string }> = {
+    const story: BlockKitStory = {
       name: "カスタム引数テスト",
       component: (args) => ({
-        blocks: [{ type: "section", text: { type: "mrkdwn", text: args?.text ?? "default" } }],
+        blocks: [{ type: "section", text: { type: "mrkdwn", text: (args as { text: string })?.text ?? "default" } }],
       }),
       args: { text: "デフォルト" },
     };
