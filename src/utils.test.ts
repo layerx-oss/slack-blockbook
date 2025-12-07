@@ -149,6 +149,6 @@ describe("createUrlFromStory", () => {
 
     expect(result.url).toContain("https://api.slack.com/tools/block-kit-builder#");
     expect(warnings.length).toBe(1);
-    expect(warnings[0]).toContain("Block Kit JSONではありません");
+    expect(warnings[0]).toContain("is not valid Block Kit JSON");
   });
 });
