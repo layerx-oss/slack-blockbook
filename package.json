@@ -5,11 +5,15 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/layerx/slack-blockbook.git"
+    "url": "https://github.com/LayerXcom/slack-blockbook.git"
   },
-  "homepage": "https://github.com/layerx/slack-blockbook#readme",
+  "homepage": "https://github.com/LayerXcom/slack-blockbook#readme",
   "bugs": {
-    "url": "https://github.com/layerx/slack-blockbook/issues"
+    "url": "https://github.com/LayerXcom/slack-blockbook/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "author": "LayerX Inc.",
   "type": "module",
