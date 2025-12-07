@@ -8,7 +8,7 @@ import {
 } from "./utils";
 
 describe("generateBlockKitUrl", () => {
-  it("blocks配列をラップしてURLを生成する", () => {
+  it("wraps blocks array and generates URL", () => {
     const blocks = [{ type: "section", text: { type: "mrkdwn", text: "Hello" } }];
     const url = generateBlockKitUrl("T12345", blocks);
 
@@ -16,7 +16,7 @@ describe("generateBlockKitUrl", () => {
     expect(url).toContain(encodeURIComponent(JSON.stringify({ blocks })));
   });
 
-  it("オブジェクトをそのままURLに変換する", () => {
+  it("converts object to URL as-is", () => {
     const payload = { type: "modal", title: { type: "plain_text", text: "Modal" } };
     const url = generateBlockKitUrl("T12345", payload);
 
@@ -26,85 +26,85 @@ describe("generateBlockKitUrl", () => {
 });
 
 describe("isBlockKitJson", () => {
-  it("type: modal を持つオブジェクトはBlock Kit JSONと判定する", () => {
+  it("returns true for object with type: modal", () => {
     expect(isBlockKitJson({ type: "modal" })).toBe(true);
   });
 
-  it("type: home を持つオブジェクトはBlock Kit JSONと判定する", () => {
+  it("returns true for object with type: home", () => {
     expect(isBlockKitJson({ type: "home" })).toBe(true);
   });
 
-  it("type: message を持つオブジェクトはBlock Kit JSONと判定する", () => {
+  it("returns true for object with type: message", () => {
     expect(isBlockKitJson({ type: "message" })).toBe(true);
   });
 
-  it("blocks プロパティを持つオブジェクトはBlock Kit JSONと判定する", () => {
+  it("returns true for object with blocks property", () => {
     expect(isBlockKitJson({ blocks: [] })).toBe(true);
   });
 
-  it("attachments プロパティを持つオブジェクトはBlock Kit JSONと判定する", () => {
+  it("returns true for object with attachments property", () => {
     expect(isBlockKitJson({ attachments: [] })).toBe(true);
   });
 
-  it("nullはBlock Kit JSONではない", () => {
+  it("returns false for null", () => {
     expect(isBlockKitJson(null)).toBe(false);
   });
 
-  it("プリミティブ値はBlock Kit JSONではない", () => {
+  it("returns false for primitive values", () => {
     expect(isBlockKitJson("string")).toBe(false);
     expect(isBlockKitJson(123)).toBe(false);
     expect(isBlockKitJson(true)).toBe(false);
   });
 
-  it("関係ないプロパティを持つオブジェクトはBlock Kit JSONではない", () => {
+  it("returns false for object with unrelated properties", () => {
     expect(isBlockKitJson({ foo: "bar" })).toBe(false);
   });
 });
 
 describe("createUrlFromStory", () => {
-  it("正常なストーリーからURLを生成する", () => {
+  it("generates URL from valid story", () => {
     const story: BlockKitStory = {
-      name: "テストストーリー",
-      description: "テスト用の説明",
+      name: "Test Story",
+      description: "Test description",
       component: () => ({ blocks: [{ type: "section", text: { type: "mrkdwn", text: "Hello" } }] }),
       tags: ["test"],
     };
 
     const result = createUrlFromStory(story, "/path/to/file.tsx", "T12345");
 
-    expect(result.storyName).toBe("テストストーリー");
-    expect(result.description).toBe("テスト用の説明");
+    expect(result.storyName).toBe("Test Story");
+    expect(result.description).toBe("Test description");
     expect(result.filePath).toBe("/path/to/file.tsx");
     expect(result.url).toContain("https://api.slack.com/tools/block-kit-builder#");
     expect(result.tags).toEqual(["test"]);
     expect(result.error).toBeUndefined();
   });
 
-  it("argsを持つストーリーからURLを生成する", () => {
+  it("generates URL from story with args", () => {
     const story: BlockKitStory = {
-      name: "引数付きストーリー",
+      name: "Story with args",
       component: (args) => ({
         blocks: [{ type: "section", text: { type: "mrkdwn", text: (args as { text: string })?.text ?? "default" } }],
       }),
-      args: { text: "カスタムテキスト" },
+      args: { text: "Custom text" },
     };
 
     const result = createUrlFromStory(story, "/path/to/file.tsx", "T12345");
 
-    expect(result.storyName).toBe("引数付きストーリー");
+    expect(result.storyName).toBe("Story with args");
     expect(result.blockKitJson).toEqual({
-      blocks: [{ type: "section", text: { type: "mrkdwn", text: "カスタムテキスト" } }],
+      blocks: [{ type: "section", text: { type: "mrkdwn", text: "Custom text" } }],
     });
     expect(result.error).toBeUndefined();
   });
 
-  it("customArgsでストーリーを上書きできる", () => {
+  it("allows overriding story args with customArgs", () => {
     const story: BlockKitStory = {
-      name: "カスタム引数テスト",
+      name: "Custom args test",
       component: (args) => ({
         blocks: [{ type: "section", text: { type: "mrkdwn", text: (args as { text: string })?.text ?? "default" } }],
       }),
-      args: { text: "デフォルト" },
+      args: { text: "Default" },
     };
 
     const result = createUrlFromStory(
@@ -112,33 +112,33 @@ describe("createUrlFromStory", () => {
       "/path/to/file.tsx",
       "T12345",
       undefined,
-      { text: "上書きされたテキスト" },
+      { text: "Overridden text" },
     );
 
     expect(result.blockKitJson).toEqual({
-      blocks: [{ type: "section", text: { type: "mrkdwn", text: "上書きされたテキスト" } }],
+      blocks: [{ type: "section", text: { type: "mrkdwn", text: "Overridden text" } }],
     });
   });
 
-  it("コンポーネントがエラーを投げた場合はerrorを返す", () => {
+  it("returns error when component throws", () => {
     const story: BlockKitStory = {
-      name: "エラーストーリー",
+      name: "Error story",
       component: () => {
-        throw new Error("テストエラー");
+        throw new Error("Test error");
       },
     };
 
     const result = createUrlFromStory(story, "/path/to/file.tsx", "T12345");
 
-    expect(result.storyName).toBe("エラーストーリー");
+    expect(result.storyName).toBe("Error story");
     expect(result.url).toBe("");
-    expect(result.error).toBe("テストエラー");
+    expect(result.error).toBe("Test error");
   });
 
-  it("Block Kit JSON以外の場合は警告を出すがURLは生成する", () => {
+  it("warns but generates URL for non-Block Kit JSON", () => {
     const warnings: string[] = [];
     const story: BlockKitStory = {
-      name: "非Block Kit",
+      name: "Non Block Kit",
       component: () => ({ foo: "bar" }),
     };
 
