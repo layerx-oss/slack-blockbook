@@ -1,7 +1,9 @@
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
-import type { BlockKitStory, GeneratedBlockKitUrl } from "./types";
+import { IGNORED_DIRECTORIES } from "./config";
+import type { BlockKitStory, GeneratedBlockKitUrl, Logger } from "./types";
+import { isBlockKitStoryArray, isNonNullObject } from "./types";
 
 /**
  * Convert Block Kit JSON to Block Kit Builder URL
@@ -24,20 +26,25 @@ export function generateBlockKitUrl(
  * Check if the object is a valid Block Kit JSON
  */
 export function isBlockKitJson(obj: unknown): boolean {
-  if (typeof obj !== "object" || obj === null) {
+  if (!isNonNullObject(obj)) {
     return false;
   }
 
-  const blockKit = obj as Record<string, unknown>;
-
   return (
-    ("type" in blockKit &&
-      (blockKit.type === "modal" ||
-        blockKit.type === "home" ||
-        blockKit.type === "message")) ||
-    "blocks" in blockKit ||
-    "attachments" in blockKit
+    ("type" in obj &&
+      (obj.type === "modal" ||
+        obj.type === "home" ||
+        obj.type === "message")) ||
+    "blocks" in obj ||
+    "attachments" in obj
   );
+}
+
+/**
+ * Generate cache buster string for ESM module cache bypass
+ */
+export function generateCacheBuster(): string {
+  return `t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
 }
 
 /**
@@ -47,10 +54,7 @@ export function createUrlFromStory(
   story: BlockKitStory,
   filePath: string,
   workspaceId: string,
-  logger?: {
-    warn: (message: string) => void;
-    log: (message: string) => void;
-  },
+  logger?: Pick<Logger, "warn" | "log">,
   customArgs?: Record<string, unknown>,
 ): GeneratedBlockKitUrl {
   try {
@@ -96,13 +100,12 @@ export function findBlockKitFiles(
   fileExtension: string,
 ): string[] {
   const results: string[] = [];
-  const ignoreDirs = ["node_modules", ".git", "dist", ".next", ".nuxt"];
 
   try {
     const entries = readdirSync(dir);
 
     for (const entry of entries) {
-      if (ignoreDirs.includes(entry)) {
+      if ((IGNORED_DIRECTORIES as readonly string[]).includes(entry)) {
         continue;
       }
 
@@ -133,11 +136,7 @@ export async function collectAllStories(
   searchDir: string,
   fileExtension: string,
   workspaceId: string,
-  logger?: {
-    error: (message: string, err?: unknown) => void;
-    log: (message: string) => void;
-    warn: (message: string) => void;
-  },
+  logger?: Logger,
 ): Promise<GeneratedBlockKitUrl[]> {
   const blockKitFiles = findBlockKitFiles(searchDir, fileExtension);
 
@@ -147,18 +146,18 @@ export async function collectAllStories(
     try {
       // Dynamic import with cache busting (timestamp and random value)
       // Using multiple parameters to ensure ESM module cache is bypassed
-      const cacheBuster = `t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
+      const cacheBuster = generateCacheBuster();
       const importUrl = `${filePath}?${cacheBuster}`;
 
       logger?.log(`🔄 Importing: ${importUrl}`);
       const mod = await import(importUrl);
       logger?.log(`✅ Import completed: ${filePath}`);
 
-      if (!mod.stories || !Array.isArray(mod.stories)) {
+      if (!isBlockKitStoryArray(mod.stories)) {
         continue;
       }
 
-      const stories = mod.stories as BlockKitStory[];
+      const stories = mod.stories;
       logger?.log(`📦 Found ${stories.length} story(s): ${filePath}`);
 
       for (const story of stories) {
@@ -184,11 +183,7 @@ export async function renderStoryWithArgs(
   storyName: string,
   args: Record<string, unknown>,
   workspaceId: string,
-  logger?: {
-    log: (message: string) => void;
-    warn: (message: string) => void;
-    error: (message: string, ...args: unknown[]) => void;
-  },
+  logger?: Logger,
   baseDir?: string,
 ): Promise<{ blockKitJson?: unknown; url?: string; error?: string }> {
   try {
@@ -196,13 +191,13 @@ export async function renderStoryWithArgs(
     const absolutePath = baseDir ? path.resolve(baseDir, filePath) : filePath;
 
     // Dynamic import with cache busting
-    const cacheBuster = `t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
+    const cacheBuster = generateCacheBuster();
     const importUrl = `${absolutePath}?${cacheBuster}`;
 
     logger?.log(`🔄 Importing for re-render: ${importUrl}`);
     const mod = await import(importUrl);
 
-    if (!mod.stories || !Array.isArray(mod.stories)) {
+    if (!isBlockKitStoryArray(mod.stories)) {
       return { error: "No stories found in file" };
     }
 

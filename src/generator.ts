@@ -1,14 +1,13 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { DEFAULT_FILE_EXTENSION } from "./config";
 import type {
   BlockKitGeneratorConfig,
-  BlockKitStory,
   GeneratedBlockKitUrl,
 } from "./types";
+import { isBlockKitStoryArray } from "./types";
 import { createUrlFromStory, findBlockKitFiles, isBlockKitJson } from "./utils";
-
-const DEFAULT_FILE_EXTENSION = ".blockkit.tsx";
 
 /**
  * Output generated URLs in markdown format
@@ -24,10 +23,12 @@ function generateMarkdown(
   // Group by file path
   const groupedByFile: Record<string, GeneratedBlockKitUrl[]> = {};
   for (const url of urls) {
-    if (!groupedByFile[url.filePath]) {
-      groupedByFile[url.filePath] = [];
+    const existing = groupedByFile[url.filePath];
+    if (existing) {
+      existing.push(url);
+    } else {
+      groupedByFile[url.filePath] = [url];
     }
-    groupedByFile[url.filePath]!.push(url);
   }
 
   let successCount = 0;
@@ -102,14 +103,14 @@ export async function generateBlockKitUrls(
       // Dynamic import
       const module = await import(filePath);
 
-      if (!module.stories || !Array.isArray(module.stories)) {
+      if (!isBlockKitStoryArray(module.stories)) {
         console.log(
           `  ⚠️  ${relativePath} has no stories export`,
         );
         continue;
       }
 
-      const stories = module.stories as BlockKitStory[];
+      const stories = module.stories;
       console.log(`  Found ${stories.length} story(s)`);
 
       // Process each story

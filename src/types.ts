@@ -3,6 +3,15 @@
  */
 
 /**
+ * Logger interface used across the library
+ */
+export interface Logger {
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string, ...args: unknown[]) => void;
+}
+
+/**
  * Args control types (Storybook-like)
  */
 export type ArgType =
@@ -223,4 +232,33 @@ export function createStory<TArgs = Record<string, never>>(
   config: BlockKitStory<TArgs>,
 ): BlockKitStory<TArgs> {
   return config;
+}
+
+/**
+ * Type guard to check if value is a BlockKitStory
+ */
+export function isBlockKitStory(value: unknown): value is BlockKitStory {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.name === "string" &&
+    typeof obj.component === "function"
+  );
+}
+
+/**
+ * Type guard to check if value is an array of BlockKitStory
+ */
+export function isBlockKitStoryArray(value: unknown): value is BlockKitStory[] {
+  return Array.isArray(value) && value.every(isBlockKitStory);
+}
+
+/**
+ * Type guard to check if value is a non-null object
+ */
+export function isNonNullObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

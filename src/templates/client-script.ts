@@ -2,6 +2,12 @@
  * Block Kit Preview client-side script
  */
 
+import {
+  INITIAL_SELECTION_DELAY,
+  SSE_RECONNECT_DELAY,
+  UI_CONFIG,
+} from "../config";
+
 interface StoryData {
   id: string;
   name: string;
@@ -16,12 +22,24 @@ interface StoryData {
 }
 
 export function generateClientScript(storyData: StoryData[]): string {
+  const { minWidth, maxWidth } = UI_CONFIG.sidebar;
   return `
     // Story data
     const STORY_DATA = ${JSON.stringify(storyData)};
 
     // Current args (persisted per story)
     const currentArgs = {};
+
+    // HTML escape function to prevent XSS
+    function escapeHtml(unsafe) {
+      if (typeof unsafe !== 'string') return unsafe;
+      return unsafe
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
 
     // JSON syntax highlighting
     function syntaxHighlight(json) {
@@ -68,18 +86,20 @@ export function generateClientScript(storyData: StoryData[]): string {
       } else {
         controlsHtml = Object.entries(variant.argTypes).map(([key, argType]) => {
         const value = currentArgs[variant.id]?.[key] ?? variant.args?.[key] ?? '';
-        const description = argType.description ? \`<div class="control-description">\${argType.description}</div>\` : '';
+        const escapedKey = escapeHtml(key);
+        const escapedValue = typeof value === 'string' ? escapeHtml(value) : value;
+        const description = argType.description ? \`<div class="control-description">\${escapeHtml(argType.description)}</div>\` : '';
 
         switch (argType.control) {
           case 'text':
             return \`
               <div class="control-group">
-                <label class="control-label">\${key}</label>
+                <label class="control-label">\${escapedKey}</label>
                 <input
                   type="text"
                   class="control-input"
-                  data-arg-key="\${key}"
-                  value="\${value}"
+                  data-arg-key="\${escapedKey}"
+                  value="\${escapedValue}"
                 />
                 \${description}
               </div>
@@ -88,11 +108,11 @@ export function generateClientScript(storyData: StoryData[]): string {
           case 'number':
             return \`
               <div class="control-group">
-                <label class="control-label">\${key}</label>
+                <label class="control-label">\${escapedKey}</label>
                 <input
                   type="number"
                   class="control-input"
-                  data-arg-key="\${key}"
+                  data-arg-key="\${escapedKey}"
                   value="\${value}"
                   \${argType.min !== undefined ? \`min="\${argType.min}"\` : ''}
                   \${argType.max !== undefined ? \`max="\${argType.max}"\` : ''}
@@ -109,10 +129,10 @@ export function generateClientScript(storyData: StoryData[]): string {
                   <input
                     type="checkbox"
                     class="control-checkbox"
-                    data-arg-key="\${key}"
+                    data-arg-key="\${escapedKey}"
                     \${value ? 'checked' : ''}
                   />
-                  <label class="control-checkbox-label">\${key}</label>
+                  <label class="control-checkbox-label">\${escapedKey}</label>
                 </div>
                 \${description}
               </div>
@@ -120,12 +140,12 @@ export function generateClientScript(storyData: StoryData[]): string {
 
           case 'select':
             const options = argType.options.map(opt =>
-              \`<option value="\${opt}" \${value === opt ? 'selected' : ''}>\${opt}</option>\`
+              \`<option value="\${escapeHtml(opt)}" \${value === opt ? 'selected' : ''}>\${escapeHtml(opt)}</option>\`
             ).join('');
             return \`
               <div class="control-group">
-                <label class="control-label">\${key}</label>
-                <select class="control-select" data-arg-key="\${key}">
+                <label class="control-label">\${escapedKey}</label>
+                <select class="control-select" data-arg-key="\${escapedKey}">
                   \${options}
                 </select>
                 \${description}
@@ -135,12 +155,12 @@ export function generateClientScript(storyData: StoryData[]): string {
           case 'date':
             return \`
               <div class="control-group">
-                <label class="control-label">\${key}</label>
+                <label class="control-label">\${escapedKey}</label>
                 <input
                   type="date"
                   class="control-input"
-                  data-arg-key="\${key}"
-                  value="\${value}"
+                  data-arg-key="\${escapedKey}"
+                  value="\${escapedValue}"
                 />
                 \${description}
               </div>
@@ -179,17 +199,17 @@ export function generateClientScript(storyData: StoryData[]): string {
       if (!displayEl) return;
 
       const descriptionHtml = variant.description
-        ? \`<p class="variant-description">\${variant.description}</p>\`
+        ? \`<p class="variant-description">\${escapeHtml(variant.description)}</p>\`
         : '';
 
       const tagsHtml = variant.tags && variant.tags.length > 0
-        ? \`<div class="tags">\${variant.tags.map(tag => \`<span class="tag">\${tag}</span>\`).join('')}</div>\`
+        ? \`<div class="tags">\${variant.tags.map(tag => \`<span class="tag">\${escapeHtml(tag)}</span>\`).join('')}</div>\`
         : '<div class="tags"></div>';
 
       let contentHtml = '';
 
       if (variant.error) {
-        contentHtml = \`<div class="error-message">⚠️ Error: \${variant.error}</div>\`;
+        contentHtml = \`<div class="error-message">⚠️ Error: \${escapeHtml(variant.error)}</div>\`;
       } else {
         const actionButtonHtml = \`
           <a href="\${variant.url}" target="_blank" class="action-button" id="open-builder-\${storyId}">
@@ -215,8 +235,8 @@ export function generateClientScript(storyData: StoryData[]): string {
       displayEl.innerHTML = \`
         <div class="variant-detail">
           <div class="variant-header">
-            <h1 class="variant-title">\${variant.name}</h1>
-            <div class="variant-path">\${variant.filePath}</div>
+            <h1 class="variant-title">\${escapeHtml(variant.name)}</h1>
+            <div class="variant-path">\${escapeHtml(variant.filePath)}</div>
           </div>
           \${descriptionHtml}
           \${contentHtml}
@@ -416,7 +436,7 @@ export function generateClientScript(storyData: StoryData[]): string {
           // Otherwise display first variant
           updateStoryDisplay(STORY_DATA[0].id);
         }
-      }, 100);
+      }, ${INITIAL_SELECTION_DELAY});
     }
 
     // Hot reload functionality (SSE)
@@ -436,7 +456,7 @@ export function generateClientScript(storyData: StoryData[]): string {
       eventSource.close();
       setTimeout(() => {
         window.location.reload();
-      }, 1000);
+      }, ${SSE_RECONNECT_DELAY});
     };
 
     // Close connection when leaving page
@@ -479,10 +499,8 @@ export function generateClientScript(storyData: StoryData[]): string {
         const deltaX = e.clientX - startX;
         const newWidth = startWidth + deltaX;
 
-        // Width constraints (match min-width, max-width)
-        const minWidth = 200;
-        const maxWidth = 600;
-        const clampedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        // Width constraints (match min-width, max-width from config)
+        const clampedWidth = Math.max(${minWidth}, Math.min(${maxWidth}, newWidth));
 
         sidebar.style.width = clampedWidth + 'px';
         updateSidebarWidth(clampedWidth);

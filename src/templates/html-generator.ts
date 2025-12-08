@@ -4,6 +4,7 @@
 
 import path from "node:path";
 
+import { escapeHtml } from "../sanitize";
 import type { GeneratedBlockKitUrl } from "../types";
 
 import { generateClientScript } from "./client-script";
@@ -34,7 +35,7 @@ interface TreeNode {
  */
 function buildStoryTree(
   groupedByFile: Record<string, GeneratedBlockKitUrl[]>,
-  baseDir: string,
+  baseDir: string
 ): TreeNode {
   const root: TreeNode = { name: "", children: new Map(), stories: [] };
 
@@ -43,25 +44,30 @@ function buildStoryTree(
     const fileId = relativePath.replaceAll(/[^a-zA-Z\d]/g, "_");
 
     for (let index = 0; index < fileUrls.length; index++) {
-      const urlData = fileUrls[index]!;
+      const urlData = fileUrls[index];
+      if (!urlData) continue;
+
       const storyId = `${fileId}_${index}`;
 
       // Parse story name for hierarchy (split by "/")
       const nameParts = urlData.storyName.split("/").map((p) => p.trim());
-      const storyDisplayName = nameParts[nameParts.length - 1]!;
+      const storyDisplayName =
+        nameParts[nameParts.length - 1] ?? urlData.storyName;
       const hierarchyParts = nameParts.slice(0, -1);
 
       // Navigate/create hierarchy
       let current = root;
       for (const part of hierarchyParts) {
-        if (!current.children.has(part)) {
-          current.children.set(part, {
+        let child = current.children.get(part);
+        if (!child) {
+          child = {
             name: part,
             children: new Map(),
             stories: [],
-          });
+          };
+          current.children.set(part, child);
         }
-        current = current.children.get(part)!;
+        current = child;
       }
 
       // Add story to current node
@@ -84,17 +90,18 @@ function renderTreeNode(node: TreeNode, depth: number = 0): string {
 
   // Render subdirectories (hierarchy from story names)
   const sortedDirs = Array.from(node.children.entries()).sort((a, b) =>
-    a[0].localeCompare(b[0]),
+    a[0].localeCompare(b[0])
   );
 
   for (const [dirName, childNode] of sortedDirs) {
     const dirId = `dir_${dirName.replaceAll(/[^a-zA-Z\d]/g, "_")}_${depth}`;
+    const escapedDirName = escapeHtml(dirName);
     html += `
       <li class="dir-item">
-        <div class="dir-header" data-dir-id="${dirId}">
+        <div class="dir-header" data-dir-id="${escapeHtml(dirId)}">
           <span class="dir-chevron">▶</span>
           <span class="folder-icon">📁</span>
-          <span class="dir-name">${dirName}</span>
+          <span class="dir-name">${escapedDirName}</span>
         </div>
         <ul class="dir-children">
           ${renderTreeNode(childNode, depth + 1)}
@@ -105,14 +112,14 @@ function renderTreeNode(node: TreeNode, depth: number = 0): string {
 
   // Render stories in this node
   const sortedStories = node.stories.sort((a, b) =>
-    a.storyName.localeCompare(b.storyName),
+    a.storyName.localeCompare(b.storyName)
   );
 
   for (const story of sortedStories) {
     html += `
-      <li class="story-item" data-story-id="${story.storyId}">
+      <li class="story-item" data-story-id="${escapeHtml(story.storyId)}">
         <span class="story-icon">📄</span>
-        <span class="story-name">${story.storyName}</span>
+        <span class="story-name">${escapeHtml(story.storyName)}</span>
       </li>
     `;
   }
@@ -127,15 +134,17 @@ export function generateHtmlPage(
   urls: GeneratedBlockKitUrl[],
   baseDir: string,
   projectName: string,
-  fileExtension: string,
+  fileExtension: string
 ): string {
   // Group by file path
   const groupedByFile: Record<string, GeneratedBlockKitUrl[]> = {};
   for (const url of urls) {
-    if (!groupedByFile[url.filePath]) {
-      groupedByFile[url.filePath] = [];
+    const existing = groupedByFile[url.filePath];
+    if (existing) {
+      existing.push(url);
+    } else {
+      groupedByFile[url.filePath] = [url];
     }
-    groupedByFile[url.filePath]!.push(url);
   }
 
   // Build story tree from story names and render sidebar
@@ -163,8 +172,11 @@ export function generateHtmlPage(
           argTypes: urlData.argTypes,
         };
       });
-    },
+    }
   );
+
+  const escapedProjectName = escapeHtml(projectName);
+  const escapedFileExtension = escapeHtml(fileExtension);
 
   return `
 <!DOCTYPE html>
@@ -172,7 +184,7 @@ export function generateHtmlPage(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SlackBlockbook - ${projectName}</title>
+  <title>SlackBlockbook - ${escapedProjectName}</title>
   <style>
 ${styles}
   </style>
@@ -200,7 +212,7 @@ ${styles}
       <span>SlackBlockbook</span>
     </div>
     <div class="header-divider"></div>
-    <div class="project-name">${projectName}</div>
+    <div class="project-name">${escapedProjectName}</div>
   </div>
 
   <!-- App Layout -->
@@ -257,10 +269,10 @@ ${styles}
             : `
         <div class="empty-canvas">
           <div class="empty-icon">🔍</div>
-          <div class="empty-title">No ${fileExtension} files found</div>
+          <div class="empty-title">No ${escapedFileExtension} files found</div>
           <div class="empty-description">
             Create a
-            <span class="empty-code">${fileExtension}</span> file in the search directory
+            <span class="empty-code">${escapedFileExtension}</span> file in the search directory
           </div>
         </div>
         `
