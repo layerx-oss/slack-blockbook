@@ -3,7 +3,7 @@
 Storybook-like preview tool for Slack Block Kit development.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-[![npm version](https://badge.fury.io/js/slack-blockbook.svg)](https://badge.fury.io/js/slack-blockbook)
+[![npm version](https://badge.fury.io/js/@layerx%2Fslack-blockbook.svg)](https://www.npmjs.com/package/@layerx/slack-blockbook)
 
 ## Features
 
@@ -15,11 +15,11 @@ Storybook-like preview tool for Slack Block Kit development.
 ## Installation
 
 ```bash
-npm install -D slack-blockbook
+npm install -D @layerx/slack-blockbook
 # or
-yarn add -D slack-blockbook
+yarn add -D @layerx/slack-blockbook
 # or
-pnpm add -D slack-blockbook
+pnpm add -D @layerx/slack-blockbook
 ```
 
 ## Quick Start
@@ -28,7 +28,7 @@ pnpm add -D slack-blockbook
 
 ```typescript
 // scripts/blockbook.ts
-import { startBlockKitPreviewServer } from "slack-blockbook";
+import { startBlockKitPreviewServer } from "@layerx/slack-blockbook";
 import path from "path";
 
 startBlockKitPreviewServer({
@@ -46,7 +46,7 @@ startBlockKitPreviewServer({
 
 ```typescript
 // src/slack/hello.blockkit.tsx
-import { createStory } from "slack-blockbook";
+import { createStory } from "@layerx/slack-blockbook";
 import { Blocks, Section } from "jsx-slack";
 
 export const stories = [
@@ -64,7 +64,7 @@ export const stories = [
 ### 3. Run the preview server
 
 ```bash
-npx slack-blockbook scripts/blockbook.ts
+npx @layerx/slack-blockbook scripts/blockbook.ts
 ```
 
 ### 4. Open in browser
@@ -161,7 +161,7 @@ createStory<{ message: string; count: number; showIcon: boolean }>({
 
 ```bash
 # Start preview server
-slack-blockbook scripts/blockbook.ts
+npx @layerx/slack-blockbook scripts/blockbook.ts
 ```
 
 ## Requirements
