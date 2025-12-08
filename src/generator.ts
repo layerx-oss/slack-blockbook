@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 
+import { createJiti, type Jiti } from "jiti";
+
 import { DEFAULT_FILE_EXTENSION } from "./config";
 import type {
   BlockKitGeneratorConfig,
@@ -8,6 +10,19 @@ import type {
 } from "./types";
 import { isBlockKitStoryArray } from "./types";
 import { createUrlFromStory, findBlockKitFiles, isBlockKitJson } from "./utils";
+
+let jitiInstance: Jiti | null = null;
+
+function getJiti(): Jiti {
+  if (!jitiInstance) {
+    jitiInstance = createJiti(import.meta.url, {
+      interopDefault: true,
+      moduleCache: false,
+      jsx: { runtime: "automatic" },
+    });
+  }
+  return jitiInstance;
+}
 
 /**
  * Output generated URLs in markdown format
@@ -95,13 +110,14 @@ export async function generateBlockKitUrls(
   const generatedUrls: GeneratedBlockKitUrl[] = [];
 
   // Process each .blockkit.tsx file
+  const jiti = getJiti();
   for (const filePath of blockKitFiles) {
     const relativePath = path.relative(baseDir, filePath);
     console.log(`📄 Processing ${relativePath}...`);
 
     try {
-      // Dynamic import
-      const module = await import(filePath);
+      // Dynamic import using jiti
+      const module = (await jiti.import(filePath)) as Record<string, unknown>;
 
       if (!isBlockKitStoryArray(module.stories)) {
         console.log(

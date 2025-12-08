@@ -15,7 +15,11 @@ Storybook-like preview tool for Slack Block Kit development.
 ## Installation
 
 ```bash
-pnpm add -D slack-blockbook tsx
+npm install -D slack-blockbook
+# or
+yarn add -D slack-blockbook
+# or
+pnpm add -D slack-blockbook
 ```
 
 ## Quick Start
@@ -60,7 +64,7 @@ export const stories = [
 ### 3. Run the preview server
 
 ```bash
-npx tsx scripts/blockbook.ts
+npx slack-blockbook scripts/blockbook.ts
 ```
 
 ### 4. Open in browser
@@ -156,17 +160,13 @@ createStory<{ message: string; count: number; showIcon: boolean }>({
 ## CLI
 
 ```bash
-# Start preview server with watch mode
+# Start preview server
 slack-blockbook scripts/blockbook.ts
-
-# With custom tsconfig
-slack-blockbook scripts/blockbook.ts --tsconfig tsconfig.scripts.json
 ```
 
 ## Requirements
 
 - Node.js >= 18
-- tsx (peer dependency)
 
 ## License
 

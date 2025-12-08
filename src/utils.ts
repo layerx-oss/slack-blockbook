@@ -1,9 +1,24 @@
 import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
+import { createJiti, type Jiti } from "jiti";
+
 import { IGNORED_DIRECTORIES } from "./config";
 import type { BlockKitStory, GeneratedBlockKitUrl, Logger } from "./types";
 import { isBlockKitStoryArray, isNonNullObject } from "./types";
+
+let jitiInstance: Jiti | null = null;
+
+function getJiti(): Jiti {
+  if (!jitiInstance) {
+    jitiInstance = createJiti(import.meta.url, {
+      interopDefault: true,
+      moduleCache: false,
+      jsx: { runtime: "automatic" },
+    });
+  }
+  return jitiInstance;
+}
 
 /**
  * Convert Block Kit JSON to Block Kit Builder URL
@@ -141,16 +156,12 @@ export async function collectAllStories(
   const blockKitFiles = findBlockKitFiles(searchDir, fileExtension);
 
   const generatedUrls: GeneratedBlockKitUrl[] = [];
+  const jiti = getJiti();
 
   for (const filePath of blockKitFiles) {
     try {
-      // Dynamic import with cache busting (timestamp and random value)
-      // Using multiple parameters to ensure ESM module cache is bypassed
-      const cacheBuster = generateCacheBuster();
-      const importUrl = `${filePath}?${cacheBuster}`;
-
-      logger?.log(`🔄 Importing: ${importUrl}`);
-      const mod = await import(importUrl);
+      logger?.log(`🔄 Importing: ${filePath}`);
+      const mod = (await jiti.import(filePath)) as Record<string, unknown>;
       logger?.log(`✅ Import completed: ${filePath}`);
 
       if (!isBlockKitStoryArray(mod.stories)) {
@@ -190,12 +201,9 @@ export async function renderStoryWithArgs(
     // Convert relative path to absolute path
     const absolutePath = baseDir ? path.resolve(baseDir, filePath) : filePath;
 
-    // Dynamic import with cache busting
-    const cacheBuster = generateCacheBuster();
-    const importUrl = `${absolutePath}?${cacheBuster}`;
-
-    logger?.log(`🔄 Importing for re-render: ${importUrl}`);
-    const mod = await import(importUrl);
+    const jiti = getJiti();
+    logger?.log(`🔄 Importing for re-render: ${absolutePath}`);
+    const mod = (await jiti.import(absolutePath)) as Record<string, unknown>;
 
     if (!isBlockKitStoryArray(mod.stories)) {
       return { error: "No stories found in file" };

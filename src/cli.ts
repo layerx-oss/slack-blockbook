@@ -1,31 +1,27 @@
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+
+import { createJiti } from "jiti";
 
 /**
  * SlackBlockbook CLI
- * tsx watch を内部で実行するラッパー
+ * Uses jiti to execute TypeScript configuration files without requiring tsx
  */
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 function printUsage() {
   console.log(`
 Usage: slack-blockbook <script-path> [options]
 
 Options:
-  --tsconfig <path>    Path to tsconfig.json (default: uses package's tsconfig.scripts.json)
   --help              Show this help message
 
 Examples:
   slack-blockbook scripts/blockbook-server.ts
-  slack-blockbook scripts/blockbook-server.ts --tsconfig tsconfig.scripts.json
+  slack-blockbook blockbook.ts
 `);
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args.includes("--help")) {
@@ -40,63 +36,29 @@ function main() {
     process.exit(1);
   }
 
-  // Find tsconfig option
-  const tsconfigIndex = args.indexOf("--tsconfig");
-  let tsconfigPath: string | undefined;
+  const absoluteScriptPath = path.resolve(process.cwd(), scriptPath);
 
-  if (tsconfigIndex !== -1 && args[tsconfigIndex + 1]) {
-    // User-specified tsconfig
-    tsconfigPath = args[tsconfigIndex + 1];
-  } else {
-    // Default: use package's tsconfig.scripts.json
-    const defaultTsconfig = path.join(__dirname, "../tsconfig.scripts.json");
-    if (existsSync(defaultTsconfig)) {
-      tsconfigPath = defaultTsconfig;
-    }
+  if (!existsSync(absoluteScriptPath)) {
+    console.error(`❌ Error: Script file not found: ${absoluteScriptPath}`);
+    process.exit(1);
   }
-
-  // Build tsx watch command
-  const tsxArgs = ["watch"];
-
-  if (tsconfigPath) {
-    tsxArgs.push("--tsconfig", tsconfigPath);
-  }
-
-  tsxArgs.push(scriptPath);
 
   console.log(`🚀 Starting SlackBlockbook Server...`);
   console.log(`📝 Script: ${scriptPath}`);
-  if (tsconfigPath) {
-    console.log(`⚙️  TSConfig: ${tsconfigPath}`);
-  }
   console.log("");
 
-  // Execute tsx
-  const child = spawn("tsx", tsxArgs, {
-    stdio: "inherit",
-    shell: true,
-  });
+  try {
+    const jiti = createJiti(import.meta.url, {
+      interopDefault: true,
+      moduleCache: false,
+      jsx: { runtime: "automatic" },
+    });
 
-  child.on("error", (err) => {
-    console.error("❌ Failed to start tsx:", err);
+    await jiti.import(absoluteScriptPath);
+  } catch (err) {
+    console.error("❌ Failed to execute script:", err);
     process.exit(1);
-  });
-
-  child.on("exit", (code) => {
-    if (code !== 0) {
-      console.error(`❌ tsx exited with code ${code}`);
-      process.exit(code ?? 1);
-    }
-  });
-
-  // Signal handling
-  process.on("SIGINT", () => {
-    child.kill("SIGINT");
-  });
-
-  process.on("SIGTERM", () => {
-    child.kill("SIGTERM");
-  });
+  }
 }
 
 main();

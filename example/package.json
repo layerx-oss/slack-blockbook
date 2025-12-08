@@ -3,14 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch blockbook.ts",
-    "start": "tsx blockbook.ts"
+    "dev": "slack-blockbook blockbook.ts",
+    "start": "slack-blockbook blockbook.ts"
   },
   "dependencies": {
     "jsx-slack": "^6.0.0",
     "slack-blockbook": "link:.."
-  },
-  "devDependencies": {
-    "tsx": "^4.0.0"
   }
 }
