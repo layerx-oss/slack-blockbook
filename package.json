@@ -1,6 +1,6 @@
 {
   "name": "@layerx/slack-blockbook",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Storybook-like preview tool for Slack Block Kit development",
   "license": "MIT",
   "repository": {
