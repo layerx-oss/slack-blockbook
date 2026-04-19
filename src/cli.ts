@@ -3,6 +3,14 @@ import path from "node:path";
 
 import { createJiti } from "jiti";
 
+import type { StaticBuildConfig } from "./build/index.js";
+
+function isStaticBuildConfig(value: unknown): value is StaticBuildConfig {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return typeof obj.workspaceId === "string" && typeof obj.searchDir === "string";
+}
+
 function printUsage() {
   console.log(`
 Usage: slack-blockbook <script-path> [options]
@@ -31,6 +39,63 @@ function parseOutDir(args: string[]): string | undefined {
   return undefined;
 }
 
+function resolveScriptPath(scriptPath: string): string {
+  const absolutePath = path.resolve(process.cwd(), scriptPath);
+  if (!existsSync(absolutePath)) {
+    console.error(`❌ Error: Script file not found: ${absolutePath}`);
+    process.exit(1);
+  }
+  return absolutePath;
+}
+
+function createJitiInstance() {
+  return createJiti(import.meta.url, {
+    interopDefault: true,
+    moduleCache: false,
+    jsx: { runtime: "automatic" },
+  });
+}
+
+async function runBuild(scriptPath: string, args: string[]) {
+  const absoluteScriptPath = resolveScriptPath(scriptPath);
+  const outDir = parseOutDir(args);
+
+  console.log(`📦 SlackBlockbook Static Build`);
+  console.log(`📝 Script: ${scriptPath}`);
+  console.log("");
+
+  const jiti = createJitiInstance();
+  const mod = (await jiti.import(absoluteScriptPath)) as Record<string, unknown>;
+
+  const config = mod.config ?? mod.default;
+  if (!isStaticBuildConfig(config)) {
+    console.error(
+      "❌ Error: Script must export a `config` object with `workspaceId` and `searchDir` for build mode.",
+    );
+    console.error(
+      "   Example: export const config = { workspaceId: '...', searchDir: '...' };",
+    );
+    process.exit(1);
+  }
+
+  const { buildStaticBlockBook } = await import("./build/index.js");
+  await buildStaticBlockBook({
+    ...config,
+    ...(outDir ? { outputDir: outDir } : {}),
+  });
+}
+
+async function runDev(scriptPath: string) {
+  const absoluteScriptPath = resolveScriptPath(scriptPath);
+
+  console.log(`🚀 Starting SlackBlockbook Server...`);
+  console.log(`📝 Script: ${scriptPath}`);
+  console.log("");
+
+  const jiti = createJitiInstance();
+  await jiti.import(absoluteScriptPath);
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -48,36 +113,12 @@ async function main() {
     process.exit(1);
   }
 
-  const absoluteScriptPath = path.resolve(process.cwd(), scriptPath);
-
-  if (!existsSync(absoluteScriptPath)) {
-    console.error(`❌ Error: Script file not found: ${absoluteScriptPath}`);
-    process.exit(1);
-  }
-
-  if (isBuild) {
-    process.env.SLACK_BLOCKBOOK_MODE = "build";
-    const outDir = parseOutDir(args);
-    if (outDir) {
-      process.env.SLACK_BLOCKBOOK_OUT_DIR = outDir;
-    }
-    console.log(`📦 SlackBlockbook Static Build`);
-    console.log(`📝 Script: ${scriptPath}`);
-    console.log("");
-  } else {
-    console.log(`🚀 Starting SlackBlockbook Server...`);
-    console.log(`📝 Script: ${scriptPath}`);
-    console.log("");
-  }
-
   try {
-    const jiti = createJiti(import.meta.url, {
-      interopDefault: true,
-      moduleCache: false,
-      jsx: { runtime: "automatic" },
-    });
-
-    await jiti.import(absoluteScriptPath);
+    if (isBuild) {
+      await runBuild(scriptPath, args);
+    } else {
+      await runDev(scriptPath);
+    }
   } catch (err) {
     console.error("❌ Failed to execute script:", err);
     process.exit(1);
