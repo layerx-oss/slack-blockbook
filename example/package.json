@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "slack-blockbook blockbook.ts",
-    "start": "slack-blockbook blockbook.ts"
+    "start": "slack-blockbook blockbook.ts",
+    "build": "slack-blockbook build blockbook.ts"
   },
   "dependencies": {
     "jsx-slack": "^6.0.0",

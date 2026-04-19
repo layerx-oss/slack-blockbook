@@ -1,3 +1,5 @@
+export { buildStaticBlockBook } from "./build";
+export type { StaticBuildConfig } from "./build";
 export {
   DEFAULT_FILE_EXTENSION,
   DEFAULT_PORT,

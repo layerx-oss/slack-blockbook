@@ -11,6 +11,9 @@ importers:
       chokidar:
         specifier: ^3.6.0
         version: 3.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
       jiti:
         specifier: ^2.6.1
         version: 2.6.1
