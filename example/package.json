@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "jsx-slack": "^6.0.0",
-    "slack-blockbook": "link:.."
+    "slack-blockbook": "file:.."
   }
 }
