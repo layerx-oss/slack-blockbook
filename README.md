@@ -10,6 +10,7 @@ Storybook-like preview tool for Slack Block Kit development.
 - **Real-time preview** with hot reload
 - **Storybook-style controls** for dynamic arguments
 - **Block Kit Builder URL generation**
+- **Static build** for hosting on GitHub Pages, Netlify, etc.
 - **Support for jsx-slack**
 
 ## Installation
@@ -157,11 +158,57 @@ createStory<{ message: string; count: number; showIcon: boolean }>({
 });
 ```
 
+## Static Build
+
+Generate a fully interactive static HTML site for hosting (GitHub Pages, Netlify, etc.). Controls work without a server — story components are bundled for client-side re-rendering.
+
+```bash
+# Build static site
+npx @layerx/slack-blockbook build scripts/blockbook.ts
+
+# With custom output directory
+npx @layerx/slack-blockbook build scripts/blockbook.ts --outDir ./dist
+```
+
+The same config file used for the dev server works for static builds. Output is written to `./blockbook-static/` by default.
+
+### Programmatic API
+
+```typescript
+import { buildStaticBlockBook } from "@layerx/slack-blockbook";
+
+await buildStaticBlockBook({
+  workspaceId: "YOUR_SLACK_WORKSPACE_ID",
+  searchDir: "./src/slack",
+  projectName: "my-project",
+  outputDir: "./blockbook-static",
+});
+```
+
+### `buildStaticBlockBook(config)`
+
+Builds a static HTML site with bundled story components.
+
+```typescript
+interface StaticBuildConfig {
+  workspaceId: string;        // Slack workspace ID
+  searchDir: string;          // Directory to search for .blockkit.tsx files
+  fileExtension?: string;     // Default: ".blockkit.tsx"
+  projectName?: string;       // Displayed in header
+  baseDir?: string;           // Base directory for relative paths
+  outputDir?: string;         // Default: "./blockbook-static"
+}
+```
+
 ## CLI
 
 ```bash
 # Start preview server
 npx @layerx/slack-blockbook scripts/blockbook.ts
+
+# Build static site
+npx @layerx/slack-blockbook build scripts/blockbook.ts
+npx @layerx/slack-blockbook build scripts/blockbook.ts --outDir ./dist
 ```
 
 ## Requirements
