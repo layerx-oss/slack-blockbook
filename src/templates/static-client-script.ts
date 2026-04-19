@@ -336,6 +336,7 @@ export function generateStaticClientScript(storyData: StoryData[]): string {
 
         let story = null;
         for (const entry of registry) {
+          if (entry.filePath !== variant.filePath) continue;
           story = entry.stories.find(s => s.name === variant.name);
           if (story) break;
         }
