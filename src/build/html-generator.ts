@@ -1,142 +1,23 @@
-/**
- * Block Kit Preview HTML generation
- */
-
 import path from "node:path";
 
 import { escapeHtml } from "../sanitize";
+import {
+  buildStoryTree,
+  renderTreeNode,
+  type StoryData,
+} from "../templates/html-generator";
+import { generateStaticClientScript } from "../templates/static-client-script";
+import { styles } from "../templates/styles";
 import type { GeneratedBlockKitUrl } from "../types";
 
-import { generateClientScript } from "./client-script";
-import { styles } from "./styles";
-
-export interface StoryData {
-  id: string;
-  name: string;
-  description?: string;
-  tags?: string[];
-  url: string;
-  blockKitJson?: unknown;
-  error?: string;
-  filePath: string;
-  args?: Record<string, unknown>;
-  argTypes?: Record<string, unknown>;
-}
-
-export interface TreeNode {
-  name: string;
-  children: Map<string, TreeNode>;
-  stories: Array<{ storyId: string; storyName: string; filePath: string }>;
-}
-
-/**
- * Build a tree structure from story names (using "/" as hierarchy separator)
- * Example: "Components/Buttons/Primary" -> Components > Buttons > Primary
- */
-export function buildStoryTree(
-  groupedByFile: Record<string, GeneratedBlockKitUrl[]>,
-  baseDir: string
-): TreeNode {
-  const root: TreeNode = { name: "", children: new Map(), stories: [] };
-
-  for (const [filePath, fileUrls] of Object.entries(groupedByFile)) {
-    const relativePath = path.relative(baseDir, filePath);
-    const fileId = relativePath.replaceAll(/[^a-zA-Z\d]/g, "_");
-
-    for (let index = 0; index < fileUrls.length; index++) {
-      const urlData = fileUrls[index];
-      if (!urlData) continue;
-
-      const storyId = `${fileId}_${index}`;
-
-      // Parse story name for hierarchy (split by "/")
-      const nameParts = urlData.storyName.split("/").map((p) => p.trim());
-      const storyDisplayName =
-        nameParts[nameParts.length - 1] ?? urlData.storyName;
-      const hierarchyParts = nameParts.slice(0, -1);
-
-      // Navigate/create hierarchy
-      let current = root;
-      for (const part of hierarchyParts) {
-        let child = current.children.get(part);
-        if (!child) {
-          child = {
-            name: part,
-            children: new Map(),
-            stories: [],
-          };
-          current.children.set(part, child);
-        }
-        current = child;
-      }
-
-      // Add story to current node
-      current.stories.push({
-        storyId,
-        storyName: storyDisplayName,
-        filePath: relativePath,
-      });
-    }
-  }
-
-  return root;
-}
-
-/**
- * Render tree node to HTML
- */
-export function renderTreeNode(node: TreeNode, depth: number = 0): string {
-  let html = "";
-
-  // Render subdirectories (hierarchy from story names)
-  const sortedDirs = Array.from(node.children.entries()).sort((a, b) =>
-    a[0].localeCompare(b[0])
-  );
-
-  for (const [dirName, childNode] of sortedDirs) {
-    const dirId = `dir_${dirName.replaceAll(/[^a-zA-Z\d]/g, "_")}_${depth}`;
-    const escapedDirName = escapeHtml(dirName);
-    html += `
-      <li class="dir-item">
-        <div class="dir-header" data-dir-id="${escapeHtml(dirId)}">
-          <span class="dir-chevron">▶</span>
-          <span class="folder-icon">📁</span>
-          <span class="dir-name">${escapedDirName}</span>
-        </div>
-        <ul class="dir-children">
-          ${renderTreeNode(childNode, depth + 1)}
-        </ul>
-      </li>
-    `;
-  }
-
-  // Render stories in this node
-  const sortedStories = node.stories.sort((a, b) =>
-    a.storyName.localeCompare(b.storyName)
-  );
-
-  for (const story of sortedStories) {
-    html += `
-      <li class="story-item" data-story-id="${escapeHtml(story.storyId)}">
-        <span class="story-icon">📄</span>
-        <span class="story-name">${escapeHtml(story.storyName)}</span>
-      </li>
-    `;
-  }
-
-  return html;
-}
-
-/**
- * Generate HTML page
- */
-export function generateHtmlPage(
+export function generateStaticHtmlPage(
   urls: GeneratedBlockKitUrl[],
   baseDir: string,
   projectName: string,
-  fileExtension: string
+  fileExtension: string,
+  workspaceId: string,
+  bundleJs: string,
 ): string {
-  // Group by file path
   const groupedByFile: Record<string, GeneratedBlockKitUrl[]> = {};
   for (const url of urls) {
     const existing = groupedByFile[url.filePath];
@@ -147,11 +28,9 @@ export function generateHtmlPage(
     }
   }
 
-  // Build story tree from story names and render sidebar
   const tree = buildStoryTree(groupedByFile, baseDir);
   const sidebarItems = renderTreeNode(tree);
 
-  // Convert story detail data to JSON
   const storyData: StoryData[] = Object.entries(groupedByFile).flatMap(
     ([filePath, fileUrls]) => {
       const relativePath = path.relative(baseDir, filePath);
@@ -172,18 +51,19 @@ export function generateHtmlPage(
           argTypes: urlData.argTypes,
         };
       });
-    }
+    },
   );
 
   const escapedProjectName = escapeHtml(projectName);
   const escapedFileExtension = escapeHtml(fileExtension);
+  const escapedWorkspaceId = escapeHtml(workspaceId);
 
-  return `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="blockbook-workspace-id" content="${escapedWorkspaceId}">
   <title>SlackBlockbook - ${escapedProjectName}</title>
   <style>
 ${styles}
@@ -194,17 +74,12 @@ ${styles}
   <div class="header">
     <div class="logo">
       <svg class="logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Top row blocks -->
         <rect x="2" y="2" width="8" height="8" rx="1.5" fill="#36C5F0"/>
         <rect x="12" y="2" width="8" height="8" rx="1.5" fill="#2EB67D"/>
         <rect x="22" y="2" width="8" height="8" rx="1.5" fill="#E01E5A"/>
-
-        <!-- Middle row blocks -->
         <rect x="2" y="12" width="8" height="8" rx="1.5" fill="#ECB22E"/>
         <rect x="12" y="12" width="8" height="8" rx="1.5" fill="#4A154B"/>
         <rect x="22" y="12" width="8" height="8" rx="1.5" fill="#36C5F0"/>
-
-        <!-- Bottom row blocks -->
         <rect x="2" y="22" width="8" height="8" rx="1.5" fill="#2EB67D"/>
         <rect x="12" y="22" width="8" height="8" rx="1.5" fill="#E01E5A"/>
         <rect x="22" y="22" width="8" height="8" rx="1.5" fill="#ECB22E"/>
@@ -281,10 +156,16 @@ ${styles}
     </div>
   </div>
 
+  <!-- Bundled story components -->
   <script>
-${generateClientScript(storyData)}
+${bundleJs}
+  </script>
+
+  <!-- Static client runtime -->
+  <script>
+${generateStaticClientScript(storyData)}
   </script>
 </body>
 </html>
-  `;
+`;
 }
