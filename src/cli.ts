@@ -3,6 +3,14 @@ import path from "node:path";
 
 import { createJiti } from "jiti";
 
+import type { StaticBuildConfig } from "./build/index.js";
+
+function isStaticBuildConfig(value: unknown): value is StaticBuildConfig {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return typeof obj.workspaceId === "string" && typeof obj.searchDir === "string";
+}
+
 function printUsage() {
   console.log(`
 Usage: slack-blockbook <script-path> [options]
@@ -60,9 +68,9 @@ async function runBuild(scriptPath: string, args: string[]) {
   const mod = (await jiti.import(absoluteScriptPath)) as Record<string, unknown>;
 
   const config = mod.config ?? mod.default;
-  if (!config || typeof config !== "object") {
+  if (!isStaticBuildConfig(config)) {
     console.error(
-      "❌ Error: Script must export a `config` object for build mode.",
+      "❌ Error: Script must export a `config` object with `workspaceId` and `searchDir` for build mode.",
     );
     console.error(
       "   Example: export const config = { workspaceId: '...', searchDir: '...' };",
@@ -71,11 +79,10 @@ async function runBuild(scriptPath: string, args: string[]) {
   }
 
   const { buildStaticBlockBook } = await import("./build/index.js");
-  const buildConfig = config as Record<string, unknown>;
-  if (outDir) {
-    buildConfig.outputDir = outDir;
-  }
-  await buildStaticBlockBook(buildConfig as unknown as Parameters<typeof buildStaticBlockBook>[0]);
+  await buildStaticBlockBook({
+    ...config,
+    ...(outDir ? { outputDir: outDir } : {}),
+  });
 }
 
 async function runDev(scriptPath: string) {
