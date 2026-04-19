@@ -1,6 +1,6 @@
 import { startBlockKitPreviewServer } from "slack-blockbook";
 
-startBlockKitPreviewServer({
+export const config = {
   port: 5176,
   workspaceId: "YOUR_SLACK_WORKSPACE_ID",
   searchDir: import.meta.dirname,
@@ -8,4 +8,6 @@ startBlockKitPreviewServer({
   baseDir: import.meta.dirname,
   restartOnChange: true,
   watchPatterns: ["**/*.tsx"],
-});
+};
+
+startBlockKitPreviewServer(config);

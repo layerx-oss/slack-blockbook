@@ -59,10 +59,6 @@ export async function bundleStories(
       target: "es2020",
       write: false,
       jsx: "automatic",
-      alias: {
-        "slack-blockbook": path.join(baseDir, "node_modules", "slack-blockbook"),
-        "@layerx/slack-blockbook": path.join(baseDir, "node_modules", "@layerx/slack-blockbook"),
-      },
       plugins: [
         {
           name: "slack-blockbook-stub",

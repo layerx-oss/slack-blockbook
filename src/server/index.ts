@@ -38,15 +38,6 @@ export {
 export async function startBlockKitPreviewServer(
   config: BlockKitPreviewConfig,
 ): Promise<void> {
-  if (process.env.SLACK_BLOCKBOOK_MODE === "build") {
-    const { buildStaticBlockBook } = await import("../build/index.js");
-    await buildStaticBlockBook({
-      ...config,
-      outputDir: process.env.SLACK_BLOCKBOOK_OUT_DIR,
-    });
-    return;
-  }
-
   const port = config.port ?? DEFAULT_PORT;
   const fileExtension = config.fileExtension ?? DEFAULT_FILE_EXTENSION;
   const projectName = config.projectName ?? "Block Kit Preview";
