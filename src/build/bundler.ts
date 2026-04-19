@@ -15,10 +15,9 @@ function generateEntryPoint(
   storyFiles: string[],
   baseDir: string,
 ): string {
-  const imports = storyFiles.map((filePath, index) => {
-    const relativePath = path.relative(baseDir, filePath);
-    return `import { stories as stories_${index} } from ${JSON.stringify(filePath)};`;
-  });
+  const imports = storyFiles.map((filePath, index) =>
+    `import { stories as stories_${index} } from ${JSON.stringify(filePath)};`,
+  );
 
   const registrations = storyFiles.map((filePath, index) => {
     const relativePath = path.relative(baseDir, filePath);
