@@ -158,7 +158,7 @@ ${styles}
 
   <!-- Bundled story components -->
   <script>
-${bundleJs.replace(/<\/script>/gi, "<\\/script>")}
+${bundleJs}
   </script>
 
   <!-- Static client runtime -->

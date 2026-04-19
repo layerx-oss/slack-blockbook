@@ -32,8 +32,7 @@ pnpm add -D @layerx/slack-blockbook
 import { startBlockKitPreviewServer } from "@layerx/slack-blockbook";
 import path from "path";
 
-// Export config so `slack-blockbook build` can also use it
-export const config = {
+startBlockKitPreviewServer({
   port: 5176,
   workspaceId: "YOUR_SLACK_WORKSPACE_ID",
   searchDir: path.join(process.cwd(), "src/slack"),
@@ -41,9 +40,7 @@ export const config = {
   baseDir: process.cwd(),
   restartOnChange: true,
   watchPatterns: ["**/*.tsx", "**/*.ts"],
-};
-
-startBlockKitPreviewServer(config);
+});
 ```
 
 ### 2. Create a Block Kit story
