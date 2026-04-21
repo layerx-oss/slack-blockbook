@@ -38,6 +38,7 @@ jobs:
               - 'vitest.config.ts'
               - 'eslint.config.js'
               - '.github/workflows/ci.yml'
+              - '.github/workflows/_reusable_build.yml'
             workflows:
               - '.github/workflows/**'
               - 'aqua.yaml'
@@ -46,31 +47,9 @@ jobs:
   build:
     needs: path-filter
     if: needs.path-filter.outputs.build == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-        with:
-          persist-credentials: false
-
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 20
-          cache: "pnpm"
-
-      - run: pnpm install
-
-      - run: pnpm typecheck
-
-      - run: pnpm lint
-
-      - run: pnpm test
-
-      - run: pnpm build
+    uses: ./.github/workflows/_reusable_build.yml
 
   actionlint:
     needs: path-filter
