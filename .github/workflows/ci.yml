@@ -4,10 +4,48 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('{0}-{1}', github.workflow, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.ref) }}
+  cancel-in-progress: true
 
 jobs:
+  # Don't use GitHub Actions' path-filter, use dorny/paths-filter instead
+  # See https://zenn.dev/shunsuke_suzuki/articles/how-to-manage-github-actions-required-status-check
+  path-filter:
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.changes.outputs.build }}
+      workflows: ${{ steps.changes.outputs.workflows }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
+        id: changes
+        with:
+          filters: |
+            build:
+              - 'src/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'tsconfig.json'
+              - 'tsup.config.ts'
+              - 'vitest.config.ts'
+              - 'eslint.config.js'
+              - '.github/workflows/ci.yml'
+            workflows:
+              - '.github/workflows/**'
+              - 'aqua.yaml'
+              - 'aqua-checksums.json'
+
   build:
+    needs: path-filter
+    if: needs.path-filter.outputs.build == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -33,3 +71,70 @@ jobs:
       - run: pnpm test
 
       - run: pnpm build
+
+  actionlint:
+    needs: path-filter
+    if: needs.path-filter.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: aquaproj/aqua-installer@d1fe50798dbadd4eb5b98957290ca175f6b4870f # v4.0.2
+        with:
+          aqua_version: v2.55.3
+      - run: actionlint
+
+  ghalint:
+    needs: path-filter
+    if: needs.path-filter.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: aquaproj/aqua-installer@d1fe50798dbadd4eb5b98957290ca175f6b4870f # v4.0.2
+        with:
+          aqua_version: v2.55.3
+      - run: ghalint run
+        env:
+          GHALINT_LOG_COLOR: always
+
+  pinact:
+    needs: path-filter
+    if: needs.path-filter.outputs.workflows == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: aquaproj/aqua-installer@d1fe50798dbadd4eb5b98957290ca175f6b4870f # v4.0.2
+        with:
+          aqua_version: v2.55.3
+      - run: pinact run --verify --check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # HACK: Aggregate workflow jobs to conclude the result of whole workflow
+  # See https://zenn.dev/shunsuke_suzuki/articles/how-to-manage-github-actions-required-status-check
+  required-status-check:
+    timeout-minutes: 5
+    needs:
+      - build
+      - actionlint
+      - ghalint
+      - pinact
+    if: failure()
+    permissions: {}
+    runs-on: ubuntu-latest
+    steps:
+      - run: exit 1
