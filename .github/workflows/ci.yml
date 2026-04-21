@@ -38,6 +38,7 @@ jobs:
               - 'vitest.config.ts'
               - 'eslint.config.js'
               - '.github/workflows/ci.yml'
+              - '.github/workflows/_reusable_build.yml'
             workflows:
               - '.github/workflows/**'
               - 'aqua.yaml'
