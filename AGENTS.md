@@ -1,0 +1,1 @@
+- Write commit messages and pull request titles/descriptions in English.
