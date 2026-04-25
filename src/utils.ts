@@ -41,6 +41,11 @@ export function generateBlockKitUrl(
  * Check if the object is a valid Block Kit JSON
  */
 export function isBlockKitJson(obj: unknown): boolean {
+  // Support array of blocks (jsx-slack returns this format)
+  if (Array.isArray(obj)) {
+    return obj.length > 0 && obj.every((item) => isNonNullObject(item) && "type" in item);
+  }
+
   if (!isNonNullObject(obj)) {
     return false;
   }

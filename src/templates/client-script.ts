@@ -7,6 +7,7 @@ import {
   SSE_RECONNECT_DELAY,
   UI_CONFIG,
 } from "../config";
+import { generateSlackRendererScript } from "./slack-renderer";
 
 interface StoryData {
   id: string;
@@ -23,9 +24,17 @@ interface StoryData {
 
 export function generateClientScript(storyData: StoryData[]): string {
   const { minWidth, maxWidth } = UI_CONFIG.sidebar;
+  const slackRendererScript = generateSlackRendererScript();
+
   return `
     // Story data
     const STORY_DATA = ${JSON.stringify(storyData)};
+
+    // Current preview mode ('preview' or 'json')
+    let currentPreviewMode = 'preview';
+
+    // Slack Block Kit renderer functions
+    ${slackRendererScript}
 
     // Current args (persisted per story)
     const currentArgs = {};
@@ -218,15 +227,35 @@ export function generateClientScript(storyData: StoryData[]): string {
           </a>
         \`;
 
+        // Generate Slack preview HTML
+        const slackPreviewHtml = variant.blockKitJson ? renderBlockKitPreview(variant.blockKitJson) : '';
+
         contentHtml = \`
           <div class="tags-and-actions">
             \${tagsHtml}
             \${actionButtonHtml}
           </div>
 
-          <div class="preview-container">
-            <div class="json-preview">
-              <pre id="json-content-\${storyId}"></pre>
+          <div class="preview-tabs">
+            <button class="preview-tab \${currentPreviewMode === 'preview' ? 'active' : ''}" data-mode="preview">
+              📱 Preview
+            </button>
+            <button class="preview-tab \${currentPreviewMode === 'json' ? 'active' : ''}" data-mode="json">
+              📄 JSON
+            </button>
+          </div>
+
+          <div class="preview-content \${currentPreviewMode === 'preview' ? 'active' : ''}" id="slack-preview-\${storyId}" data-mode="preview">
+            <div style="padding: 1.5rem; background: #f6f9fc;">
+              \${slackPreviewHtml}
+            </div>
+          </div>
+
+          <div class="preview-content \${currentPreviewMode === 'json' ? 'active' : ''}" data-mode="json">
+            <div class="preview-container" style="margin: 0; border-radius: 0; border: none;">
+              <div class="json-preview">
+                <pre id="json-content-\${storyId}"></pre>
+              </div>
             </div>
           </div>
         \`;
@@ -250,6 +279,24 @@ export function generateClientScript(storyData: StoryData[]): string {
           jsonElement.innerHTML = syntaxHighlight(variant.blockKitJson);
         }
       }
+
+      // Setup preview tab switching
+      document.querySelectorAll('.preview-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          const mode = e.currentTarget.dataset.mode;
+          currentPreviewMode = mode;
+
+          // Update tab active state
+          document.querySelectorAll('.preview-tab').forEach(t => {
+            t.classList.toggle('active', t.dataset.mode === mode);
+          });
+
+          // Update content visibility
+          document.querySelectorAll('.preview-content').forEach(content => {
+            content.classList.toggle('active', content.dataset.mode === mode);
+          });
+        });
+      });
 
       // Always show Controls footer
       let controlsFooter = document.getElementById('controls-footer');
@@ -378,6 +425,13 @@ export function generateClientScript(storyData: StoryData[]): string {
         if (jsonElement && result.blockKitJson) {
           console.log('✅ Updating JSON preview');
           jsonElement.innerHTML = syntaxHighlight(result.blockKitJson);
+        }
+
+        // Update Slack preview
+        const slackPreviewElement = document.getElementById(\`slack-preview-\${storyId}\`);
+        if (slackPreviewElement && result.blockKitJson) {
+          console.log('✅ Updating Slack preview');
+          slackPreviewElement.innerHTML = '<div style="padding: 1.5rem; background: #f6f9fc;">' + renderBlockKitPreview(result.blockKitJson) + '</div>';
         }
 
         // Update "Open in Block Kit Builder" button URL
